@@ -1,16 +1,42 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Geojson, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Geojson, MapMarker, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
-// Import dữ liệu
+import BuildingListPanel from '../components/BuildingListPanel';
+import { Building, BUILDINGS } from '../constants/buildings';
+
+// Import GeoJSON data
 import buildingsData from '../../assets/buildings.json';
 import buildingData from '../../assets/campus_buildings.json';
 import streetData from '../../assets/streets.json';
 
 export default function HomeScreen() {
+  const mapRef = useRef<MapView>(null);
+  // Store a ref for each marker so we can call showCallout()
+  const markerRefs = useRef<Record<string, MapMarker | null>>({});
+
+  const handleSelectBuilding = (building: Building) => {
+    // 1. Fly camera to the selected building
+    mapRef.current?.animateToRegion(
+      {
+        latitude: building.coordinate.latitude,
+        longitude: building.coordinate.longitude,
+        latitudeDelta: 0.003,
+        longitudeDelta: 0.003,
+      },
+      700
+    );
+
+    // 2. Show the marker callout after the animation settles
+    setTimeout(() => {
+      markerRefs.current[building.id]?.showCallout();
+    }, 800);
+  };
+
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         provider={PROVIDER_GOOGLE}
         mapType="hybrid"
         style={styles.map}
@@ -21,7 +47,7 @@ export default function HomeScreen() {
           longitudeDelta: 0.01,
         }}
       >
-        {/* Layer 1: Khuôn viên */}
+        {/* Layer 1: Campus boundary */}
         <Geojson
           geojson={buildingData as any}
           strokeColor="#2ecc71"
@@ -29,72 +55,35 @@ export default function HomeScreen() {
           strokeWidth={2}
         />
 
-        {/* Layer 2: Đường đi */}
+        {/* Layer 2: Streets */}
         <Geojson
           geojson={streetData as any}
           strokeColor="#e74c3c"
           strokeWidth={2}
         />
 
-        {/* Layer 3: Các tòa nhà */}
+        {/* Layer 3: Building outlines */}
         <Geojson
           geojson={buildingsData as any}
-          strokeColor="yellow" // Đổi thành màu vàng cho rực rỡ
-          fillColor="red"      // Nền đỏ để dễ check
-          strokeWidth={5}      // Nét cực dày
+          strokeColor="yellow"
+          fillColor="red"
+          strokeWidth={5}
         />
-        <Marker
-          coordinate={{ latitude: 11.054120, longitude: 106.664998 }} // Tọa độ tòa nhà
-          title="B9"
-          description="Trường Đại học Quốc tế Miền Đông"
-        />
-        <Marker
-          coordinate={{ latitude: 11.053615, longitude: 106.665175 }} // Tọa độ tòa nhà
-          title="B10"
-          description="Trường Đại học Quốc tế Miền Đông"
-        /> <Marker
-          coordinate={{ latitude: 11.054111, longitude: 106.666735 }} // Tọa độ tòa nhà
-          title="B11"
-          description="Trường Đại học Quốc tế Miền Đông"
-        /> <Marker
-          coordinate={{ latitude: 11.054710, longitude: 106.666477 }} // Tọa độ tòa nhà
-          title="B8"
-          description="Trường Đại học Quốc tế Miền Đông"
-        /> <Marker
-          coordinate={{ latitude: 11.055053, longitude: 106.667248 }} // Tọa độ tòa nhà
-          title="CANTEEN"
-          description="Trường Đại học Quốc tế Miền Đông"
-        /> <Marker
-          coordinate={{ latitude: 11.052054, longitude: 106.667976 }} // Tọa độ tòa nhà
-          title="recruit"
-          description="Trường Đại học Quốc tế Miền Đông"
-        /> <Marker
-          coordinate={{ latitude: 11.05399, longitude: 106.667718 }} // Tọa độ tòa nhà
-          title="PARKING"
-          description="Trường Đại học Quốc tế Miền Đông"
-        /> <Marker
-          coordinate={{ latitude: 11.053667, longitude: 106.667484 }} // Tọa độ tòa nhà
-          title="LIBRARY"
-          description="Trường Đại học Quốc tế Miền Đông"
-        /> <Marker
-          coordinate={{ latitude: 11.05251, longitude: 106.667652 }} // Tọa độ tòa nhà
-          title="B3"
-          description="Trường Đại học Quốc tế Miền Đông"
-        /> <Marker
-          coordinate={{ latitude: 11.054900, longitude: 106.664941 }} // Tọa độ tòa nhà
-          title="PARKING3"
-          description="Trường Đại học Quốc tế Miền Đông"
-        /> <Marker
-          coordinate={{ latitude: 11.055177, longitude: 106.666398 }} // Tọa độ tòa nhà
-          title="PARKING4"
-          description="Trường Đại học Quốc tế Miền Đông"
-        />
-        <Marker
-          coordinate={{ latitude: 11.05218, longitude: 106.668420 }} // Tọa độ tòa nhà
-          title="PARKING2"
-          description="Trường Đại học Quốc tế Miền Đông"
-        />
+
+        {/* Markers — generated from BUILDINGS constant */}
+        {BUILDINGS.map((building) => (
+          <Marker
+            key={building.id}
+            ref={(ref) => { markerRefs.current[building.id] = ref; }}
+            coordinate={building.coordinate}
+            title={building.title}
+            description={building.description}
+          />
+        ))}
       </MapView>
+
+      {/* Searchable building list panel */}
+      <BuildingListPanel onSelect={handleSelectBuilding} />
     </View>
   );
 }
