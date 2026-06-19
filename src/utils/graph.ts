@@ -51,6 +51,11 @@ export function buildGraph(): GraphData {
     const geom = feature.geometry;
     if (!geom || geom.type !== 'MultiLineString') continue;
 
+    // Skip stubs that go INTO building interiors (duongdi ending with "-in")
+    // These cause the route to visually cut through building footprints.
+    const duongdi: string = feature.properties?.duongdi ?? '';
+    if (duongdi.endsWith('-in')) continue;
+
     for (const lineString of geom.coordinates as number[][][]) {
       for (let i = 0; i < lineString.length - 1; i++) {
         // GeoJSON: [longitude, latitude]
