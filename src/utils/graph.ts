@@ -37,6 +37,7 @@ function addEdge(adj: AdjacencyList, fromKey: string, toKey: string, toCoord: La
   adj.get(fromKey)!.push({ neighbourKey: toKey, weight, coord: toCoord });
 }
 
+
 // ──────────────────────────────────────────────
 // Graph Builder
 // ──────────────────────────────────────────────

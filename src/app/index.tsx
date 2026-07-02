@@ -32,7 +32,6 @@ const CAMPUS_BOUNDARY = [
   { latitude: 11.054979949440193, longitude: 106.664552698346981 },
 ];
 
-
 export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
   const markerRefs = useRef<Record<string, MapMarker | null>>({});

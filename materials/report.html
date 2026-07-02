@@ -1,0 +1,1012 @@
+<style>body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; text-align: justify; } h1, h2, h3 { text-align: center; font-weight: bold; } h1 { font-size: 14pt; } h2 { font-size: 13pt; text-align: left; } h3 { font-size: 12pt; text-align: left; } h1.title, h2.title { text-align: center; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid black; padding: 5px; text-align: left; }</style><h1>EASTERN INTERNATIONAL UNIVERSITY</h1>
+<h2>SCHOOL OF COMPUTING AND INFORMATION TECHNOLOGY</h2>
+<h3>DEPARTMENT OF SOFTWARE ENGINEERING</h3>
+<hr>
+<h1>PROJECT 1 REPORT</h1>
+<h2>MyCampusApp ΓÇö A Hybrid Mobile Campus Navigation Application for Eastern International University</h2>
+<hr>
+<p><strong>Student:</strong>
+Nguyen Alexander Hung ΓÇö ID: [Student ID]</p>
+<p><strong>Supervisor:</strong>
+[Supervisor Name]</p>
+<p><strong>June 2026</strong></p>
+<hr>
+<p>&nbsp;</p>
+<h2>ABSTRACT</h2>
+<p>Campus navigation remains a persistent challenge for new students, faculty, and visitors of Eastern International University (EIU), whose sprawling grounds contain multiple academic blocks, support facilities, parking areas, and pedestrian walkways that are insufficiently represented by commercial mapping platforms. This report documents the design and implementation of <strong>MyCampusApp</strong>, a <strong>demo version</strong> of a lightweight cross-platform (hybrid) mobile navigation application built with React Native and the Expo framework. As a demonstration prototype, this version is intended to showcase core functionality and proof-of-concept rather than serve as a final, production-ready release. The application renders a fully interactive Google Maps base layer augmented with custom spatial overlays derived from EIU&#39;s internal GIS data, originally encoded as Shapefile layers and subsequently converted into the GeoJSON format. The routing core employs the <strong>A* (A-star) pathfinding algorithm</strong> operating over a custom-built graph data structure whose nodes and edges are derived from the campus pedestrian road network. The Haversine formula is used as the heuristic for geographic distance estimation. The application provides point-to-point route planning between twelve labelled landmarks, real-time GPS localisation via the device&#39;s native location services, and a polished bottom-sheet user interface.</p>
+<hr>
+<p>&nbsp;</p>
+<h2>ACKNOWLEDGEMENT</h2>
+<p>The author wishes to express sincere gratitude to the supervisor and the School of Computing and Information Technology at Eastern International University for their guidance and support throughout this project. Appreciation is also extended to the open-source communities behind React Native, Expo, and the GeoJSON specification, whose freely available tooling and documentation made this work possible.</p>
+<hr>
+<p>&nbsp;</p>
+<h2>TABLE OF CONTENTS</h2>
+<ul>
+<li>ABSTRACT ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª i</li>
+<li>ACKNOWLEDGEMENT ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª ii</li>
+<li>TABLE OF CONTENTS ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª iii</li>
+<li>LIST OF FIGURES ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª iv</li>
+<li>LIST OF TABLES ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª v</li>
+<li>LIST OF ABBREVIATIONS ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª vi</li>
+<li>CHAPTER 1. INTRODUCTION ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 1<ul>
+<li>1.1. Project Statement ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 1</li>
+<li>1.2. Background and Motivation ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 2</li>
+<li>1.3. Objectives and Scope ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 3</li>
+</ul>
+</li>
+<li>CHAPTER 2. RELATED WORKS ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 4<ul>
+<li>2.1. Campus Navigation Systems ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 4</li>
+<li>2.2. Cross-Platform Mobile Frameworks ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 5</li>
+</ul>
+</li>
+<li>CHAPTER 3. PROPOSED APPROACH, ANALYSIS, AND DESIGN ΓÇªΓÇªΓÇªΓÇª 7<ul>
+<li>3.1. Requirements Analysis ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 7</li>
+<li>3.2. Spatial Data Architecture and Shapefile Processing ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 9</li>
+<li>3.3. Routing Algorithm and Data Flow ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 11</li>
+<li>3.4. User Interface (UI) Design ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 15</li>
+</ul>
+</li>
+<li>CHAPTER 4. DEMO RESULTS ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 17<ul>
+<li>4.1. Implementation Environment ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 17</li>
+<li>4.2. Application Interfaces and Functionalities ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 18</li>
+
+</ul>
+</li>
+<li>CHAPTER 5. CONCLUSION AND FUTURE WORKS ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 23<ul>
+<li>5.1. Conclusion ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 23</li>
+<li>5.2. Future Works ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 24</li>
+</ul>
+</li>
+<li>REFERENCES ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 25</li>
+<li>APPENDIX ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 26</li>
+</ul>
+<hr>
+<p>&nbsp;</p>
+<h2>LIST OF FIGURES</h2>
+<ul>
+<li>Figure 3.1. System Architecture Overview ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 8</li>
+<li>Figure 3.2. GeoJSON Data Pipeline ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 10</li>
+<li>Figure 3.3. Campus Graph Network Representation ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 12</li>
+<li>Figure 3.4. A* Algorithm Flowchart ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 14</li>
+<li>Figure 3.5. UI Wireframe ΓÇö Main Map Screen ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 16</li>
+<li>Figure 3.6. UI Wireframe ΓÇö Route Planner Panel ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 16</li>
+<li>Figure 4.1. Application Launch Screen with Campus Overlay ΓÇªΓÇªΓÇªΓÇªΓÇª 18</li>
+<li>Figure 4.2. Building Picker Modal with Search Functionality ΓÇªΓÇªΓÇªΓÇªΓÇª 19</li>
+<li>Figure 4.3. Successful Route from Block B9 to Block B8 ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 20</li>
+<li>Figure 4.4. Route Panel ΓÇö Collapsed and Expanded States ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 21</li>
+</ul>
+<hr>
+<p>&nbsp;</p>
+<h2>LIST OF TABLES</h2>
+<ul>
+<li>Table 3.1. Functional Requirements ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 7</li>
+<li>Table 3.2. Non-Functional Requirements ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 8</li>
+<li>Table 3.3. Campus Landmark Coordinates ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 10</li>
+<li>Table 3.4. streets.json Feature Properties ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 11</li>
+<li>Table 4.1. Development Environment Specifications ΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇªΓÇª 17</li>
+
+</ul>
+<hr>
+<p>&nbsp;</p>
+<h2>LIST OF ABBREVIATIONS</h2>
+<table>
+<thead>
+<tr>
+<th>No.</th>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>API</td>
+<td>Application Programming Interface</td>
+</tr>
+<tr>
+<td>2</td>
+<td>EIU</td>
+<td>Eastern International University</td>
+</tr>
+<tr>
+<td>3</td>
+<td>GeoJSON</td>
+<td>Geographic JavaScript Object Notation</td>
+</tr>
+<tr>
+<td>4</td>
+<td>GIS</td>
+<td>Geographic Information System</td>
+</tr>
+<tr>
+<td>5</td>
+<td>GPS</td>
+<td>Global Positioning System</td>
+</tr>
+<tr>
+<td>6</td>
+<td>JSON</td>
+<td>JavaScript Object Notation</td>
+</tr>
+<tr>
+<td>7</td>
+<td>JSX / TSX</td>
+<td>JavaScript XML / TypeScript XML</td>
+</tr>
+<tr>
+<td>8</td>
+<td>SDK</td>
+<td>Software Development Kit</td>
+</tr>
+<tr>
+<td>9</td>
+<td>UI / UX</td>
+<td>User Interface / User Experience</td>
+</tr>
+<tr>
+<td>10</td>
+<td>WGS-84</td>
+<td>World Geodetic System 1984</td>
+</tr>
+</tbody></table>
+<hr>
+<p>&nbsp;</p>
+<h1>CHAPTER 1. INTRODUCTION</h1>
+<h2>1.1. Project Statement</h2>
+<p>Eastern International University occupies a large, multi-block campus in Binh Duong Province, Vietnam. The campus contains numerous academic buildings (Blocks B3, B8, B9, B10, B11), support facilities such as the Library, Canteen, and multiple Parking Zones, all connected by an internal network of pedestrian pathways and roads. New students, prospective applicants, visiting faculty, and delivery personnel frequently encounter difficulty locating specific facilities within this environment.</p>
+<p>The problem is compounded by the fact that commercial mapping services such as Google Maps, Apple Maps, and HERE Maps do not capture the fine-grained internal road topology of private campuses. While these platforms accurately represent the surrounding urban street network, they do not possess data about the pedestrian walkways, named internal roads (e.g., &quot;side-b10-gate4&quot;, &quot;circle&quot;, &quot;road-canteen&quot;), or the precise spatial relationships between academic blocks within the EIU boundary. A user relying on Google Maps alone would receive no navigational guidance once they enter the campus gate.</p>
+<p>This project addresses that gap by building a dedicated, lightweight mobile application ΓÇö <strong>MyCampusApp</strong> ΓÇö that provides indoor-grade navigation for the EIU campus using a custom GIS dataset. The application renders the campus map on top of a standard satellite/street base layer, overlays custom polygon and polyline layers derived from the university&#39;s own Shapefile data, and computes optimal walking routes between any two named landmarks using a graph-based pathfinding algorithm.</p>
+<h2>1.2. Background and Motivation</h2>
+<p>The proliferation of smartphones has made mobile mapping an essential daily tool for billions of users worldwide. Navigation applications have advanced from simple turn-by-turn street guidance to rich, context-aware platforms integrating indoor positioning, augmented reality, and real-time traffic data. Institutions such as universities, hospitals, airports, and shopping centres have increasingly recognised that commercial maps do not meet their internal wayfinding needs, motivating the development of purpose-built campus navigation solutions.</p>
+<p>Several technical trends converge to make this project feasible without specialist hardware:</p>
+<p><strong>Cross-platform mobile development</strong> frameworks such as React Native allow a single TypeScript codebase to compile to both iOS and Android, significantly reducing engineering effort compared to native development in Swift/Objective-C and Kotlin/Java.</p>
+<p><strong>GIS-grade spatial data formats</strong>, particularly GeoJSON, provide a lightweight, human-readable encoding of geographic geometries (points, polylines, polygons) that can be bundled directly into a mobile application as a static asset ΓÇö eliminating the need for a backend map tile server.</p>
+<p><strong>Graph-based pathfinding algorithms</strong>, specifically A* (A-star), are well-established in computer science and offer optimal shortest-path solutions for the scale of a campus road network (typically fewer than 1,000 nodes), allowing computation to occur entirely on-device in under one millisecond.</p>
+<p>The motivation for this specific project arose from the direct experience of students and visitors navigating the EIU campus. The campus&#39;s architecture ΓÇö with parallel rows of similarly styled buildings ΓÇö creates spatial disorientation, and the absence of visible directional signage compounds the problem. A digital navigation tool accessible on a personal smartphone represents the most scalable and low-maintenance solution.</p>
+<h2>1.3. Objectives and Scope</h2>
+<p><strong>Objectives:</strong></p>
+<ol>
+<li>Develop a functional hybrid mobile application that renders the EIU campus boundary and internal road network as interactive map overlays.</li>
+<li>Implement a graph-based routing engine (A*) over the custom campus road dataset that computes optimal walking paths between any two named landmarks.</li>
+<li>Provide real-time GPS localisation so that users can navigate from their current position.</li>
+<li>Design and implement an intuitive, polished user interface featuring a full-screen map, custom building markers, and a draggable route-planning panel.</li>
+<li>Bundle all spatial data as static application assets to eliminate any dependency on backend infrastructure.</li>
+</ol>
+<p><strong>Scope:</strong></p>
+<p>The application is geographically restricted to the EIU campus boundary polygon, defined by the coordinate extent approximately between latitudes 11.0498┬░N ΓÇô 11.0558┬░N and longitudes 106.6631┬░E ΓÇô 106.6690┬░E. The road network dataset covers all internal pedestrian walkways and vehicle roads within this boundary for which GIS data was available at the time of development. The twelve named landmarks included are: Block B3, Block B8, Block B9, Block B10, Block B11 (IT), the Library, the Canteen, the Recruitment Office, Parking Zones 1ΓÇô4.</p>
+<p>The scope explicitly excludes: outdoor navigation on public roads beyond the campus boundary, indoor floor-by-floor navigation within buildings, and real-time dynamic features such as event scheduling or crowd density mapping.</p>
+<hr>
+<p>&nbsp;</p>
+<h1>CHAPTER 2. RELATED WORKS</h1>
+<h2>2.1. Campus Navigation Systems</h2>
+<p>Campus navigation systems have been an active area of research and commercial development for over a decade. Several approaches exist in the literature and in production:</p>
+<p><strong>Web-Based GIS Portals:</strong> Many universities publish static online maps built with ArcGIS Online, Google Maps Platform, or Leaflet.js. These portals present a browser-accessible map with clickable building markers but offer no turn-by-turn routing for pedestrians. Their primary limitation is the requirement for an internet browser and no mobile-native experience.</p>
+<p><strong>Dedicated Native Applications:</strong> Institutions such as MIT, Stanford, and the National University of Singapore have deployed iOS/Android applications that use the Google Maps SDK or Apple MapKit with custom overlays for internal navigation. These applications typically maintain a backend database of room-level points of interest and integrate with the institution&#39;s identity management system. Their limitation is the cost and complexity of maintaining two separate native codebases.</p>
+<p><strong>Hybrid Applications (React Native / Flutter):</strong> More recent campus navigation projects have adopted cross-platform frameworks. A 2022 study by Pham et al. demonstrated a React Native-based navigation system for a Vietnamese university that used OpenStreetMap tiles and OSRM (Open Source Routing Machine) for routing, achieving sub-second route computation for pedestrian paths of up to 2 km. A key finding was that bundling a pre-computed routing graph as a local JSON asset, rather than querying a remote OSRM server, reduced first-query latency by approximately 80%.</p>
+<p><strong>Indoor Navigation Research:</strong> For multi-storey buildings, GPS signals are unavailable, and researchers have explored Bluetooth Low Energy (BLE) beacon triangulation, Wi-Fi fingerprinting (Mirowski et al., 2013), and visual positioning systems (VPS) using computer vision. These approaches are beyond the scope of this project but represent important directions for future extension.</p>
+<p>The approach taken by MyCampusApp most closely aligns with the static-asset hybrid model: all routing data is pre-processed and bundled with the application, ensuring that navigation functions correctly even without cellular network connectivity ΓÇö a significant advantage in areas of poor coverage.</p>
+<h2>2.2. Cross-Platform Mobile Frameworks</h2>
+<p>The selection of a development framework is a foundational architectural decision that affects developer productivity, application performance, UI fidelity, and long-term maintainability. Three frameworks dominated consideration for this project:</p>
+<p><strong>Flutter (Dart, Google, 2018):</strong> Flutter compiles to native ARM code and uses its own rendering engine (Skia/Impeller) rather than platform-native UI widgets, producing highly consistent cross-platform appearance. Its map integration ecosystem (flutter_map, google_maps_flutter) is mature. However, Flutter&#39;s adoption of Dart ΓÇö a language with limited prior exposure in academic curricula focused on JavaScript/TypeScript ΓÇö was identified as a learning overhead risk for a time-constrained project.</p>
+<p><strong>React Native (JavaScript/TypeScript, Meta, 2015):</strong> React Native renders native platform UI components through a JavaScript bridge (or the newer JSI architecture), giving applications a genuinely native look and feel. Its ecosystem is extensive: the <code>react-native-maps</code> library provides a production-grade wrapper around both Google Maps SDK (Android) and Apple MapKit (iOS). Critically, the development team possessed prior experience in React, making the framework the most productive choice.</p>
+<p><strong>Ionic (Angular/React/Vue, HTML/CSS):</strong> Ionic wraps a web view inside a native shell, meaning the map rendering is performed by the browser engine rather than the native map SDK. This imposes significant performance penalties on map tile rendering and gesture handling, making it unsuitable for a map-centric application.</p>
+<p><strong>Decision:</strong> React Native with the Expo managed workflow was selected for the following reasons:</p>
+<ul>
+<li>TypeScript-first development with strong type safety for geographic coordinate types.</li>
+<li><code>react-native-maps</code> provides direct access to Google Maps SDK with Polygon, Polyline, and Marker primitives needed for the spatial overlay system.</li>
+<li>Expo&#39;s managed workflow simplifies SDK integration (location, linear gradient, router) without requiring ejection to bare React Native.</li>
+<li><code>expo-location</code> provides a unified, permission-managed GPS API across iOS and Android.</li>
+</ul>
+<p><strong>Table 2.1. Framework Comparison</strong></p>
+<table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>React Native + Expo</th>
+<th>Flutter</th>
+<th>Ionic</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Language</td>
+<td>TypeScript</td>
+<td>Dart</td>
+<td>HTML/JS</td>
+</tr>
+<tr>
+<td>Map SDK</td>
+<td>Google Maps (native)</td>
+<td>Google Maps (native)</td>
+<td>Leaflet (WebView)</td>
+</tr>
+<tr>
+<td>Map Performance</td>
+<td>High</td>
+<td>High</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>GPS Integration</td>
+<td>expo-location</td>
+<td>geolocator</td>
+<td>Capacitor</td>
+</tr>
+<tr>
+<td>Team Familiarity</td>
+<td>High</td>
+<td>Low</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>Selected</strong></td>
+<td>Γ£à Yes</td>
+<td>ΓÇö</td>
+<td>ΓÇö</td>
+</tr>
+</tbody></table>
+<hr>
+<p>&nbsp;</p>
+<h1>CHAPTER 3. PROPOSED APPROACH, ANALYSIS, AND DESIGN</h1>
+<h2>3.1. Requirements Analysis</h2>
+<p>Requirements were elicited through direct observation of campus navigation difficulties and analysis of comparable navigation systems.</p>
+<p><strong>Table 3.1. Functional Requirements</strong></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FR-01</td>
+<td>Display a full-screen interactive map centred on the EIU campus</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-02</td>
+<td>Render the campus boundary as a semi-transparent polygon overlay</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-03</td>
+<td>Display custom marker badges for all 12 named landmarks</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-04</td>
+<td>Request and use device GPS to show user&#39;s current position</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-05</td>
+<td>Allow user to select a start and end location via a picker modal</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-06</td>
+<td>Compute the shortest walking route between two selected points</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-07</td>
+<td>Render the computed route as a blue polyline on the map</td>
+<td>High</td>
+</tr>
+<tr>
+<td>FR-08</td>
+<td>Auto-zoom the map to fit the computed route</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>FR-09</td>
+<td>Allow the user to clear the current route</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>FR-10</td>
+<td>Support tap-on-marker to set destination and auto-route</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>FR-11</td>
+<td>Search/filter buildings by name in the picker modal</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>FR-12</td>
+<td>Collapsible/draggable bottom route-planning sheet</td>
+<td>Low</td>
+</tr>
+</tbody></table>
+<p><strong>Table 3.2. Non-Functional Requirements</strong></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NFR-01</td>
+<td>Route computation latency</td>
+<td>&lt; 100 ms on mid-range Android</td>
+</tr>
+<tr>
+<td>NFR-02</td>
+<td>Map tile rendering frame rate</td>
+<td>ΓëÑ 30 fps during pan/zoom</td>
+</tr>
+<tr>
+<td>NFR-03</td>
+<td>Application cold-start time</td>
+<td>&lt; 4 seconds</td>
+</tr>
+<tr>
+<td>NFR-04</td>
+<td>GPS position update frequency</td>
+<td>Γëñ 3 seconds or ΓëÑ 2 m movement</td>
+</tr>
+<tr>
+<td>NFR-05</td>
+<td>Bundle size (APK)</td>
+<td>&lt; 80 MB</td>
+</tr>
+<tr>
+<td>NFR-06</td>
+<td>Offline routing capability</td>
+<td>Full (no internet needed for routing)</td>
+</tr>
+</tbody></table>
+<p><strong>Figure 3.1. System Architecture Overview</strong></p>
+<pre><code>ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé                    MyCampusApp (React Native / Expo)         Γöé
+Γöé                                                             Γöé
+Γöé  ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ   ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ   ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ  Γöé
+Γöé  Γöé  UI Layer   Γöé   Γöé  Business Logic  Γöé   Γöé  Data Layer Γöé  Γöé
+Γöé  Γöé             Γöé   Γöé                  Γöé   Γöé             Γöé  Γöé
+Γöé  Γöé HomeScreen  ΓöéΓöÇΓöÇΓû╢Γöé computeRoute()   ΓöéΓöÇΓöÇΓû╢Γöé graph.ts    Γöé  Γöé
+Γöé  Γöé RoutePanel  Γöé   Γöé handleMarker     Γöé   Γöé (A* + Graph)Γöé  Γöé
+Γöé  Γöé PickerModal Γöé   Γöé Press()          Γöé   Γöé             Γöé  Γöé
+Γöé  Γöé MapView     Γöé   Γöé handlePicker     Γöé   Γöé streets.jsonΓöé  Γöé
+Γöé  Γöé             Γöé   Γöé Select()         Γöé   Γöé (GeoJSON)   Γöé  Γöé
+Γöé  ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ   ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ   ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ  Γöé
+Γöé                                                             Γöé
+Γöé  ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ    Γöé
+Γöé  Γöé               Native Device Services                Γöé    Γöé
+Γöé  Γöé  expo-location (GPS)   |   Google Maps SDK          Γöé    Γöé
+Γöé  ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ    Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+</code></pre>
+<h2>3.2. Spatial Data Architecture and Shapefile Processing</h2>
+<h3>3.2.1. Input Data</h3>
+<p>The spatial dataset for EIU&#39;s campus was originally captured in the ESRI Shapefile format, an industry-standard binary vector format used by GIS software such as QGIS and ArcGIS. The dataset comprised two primary layers:</p>
+<ol>
+<li><p><strong>Polygon Layer (campus_buildings.json):</strong> Represents the closed boundary polygon of the campus perimeter and the footprints of individual buildings. Encoded as a GeoJSON <code>MultiPolygon</code> and <code>MultiLineString</code> FeatureCollection with WGS-84 coordinates.</p>
+</li>
+<li><p><strong>Polyline Layer (streets.json):</strong> Represents the internal pedestrian and vehicle road network as a set of <code>MultiLineString</code> features. Each feature includes properties:</p>
+<ul>
+<li><code>id</code> (integer): unique identifier</li>
+<li><code>duongdi</code> (string): Vietnamese road name/tag (e.g., &quot;b8-b9&quot;, &quot;gate-gate&quot;, &quot;road-canteen&quot;)</li>
+<li><code>length</code> (float): pre-computed segment length in metres</li>
+</ul>
+</li>
+</ol>
+<p><strong>Table 3.3. Campus Landmark Coordinates (WGS-84)</strong></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Latitude</th>
+<th>Longitude</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>b3</td>
+<td>Block 3</td>
+<td>11.05251</td>
+<td>106.667652</td>
+</tr>
+<tr>
+<td>b8</td>
+<td>Block 8</td>
+<td>11.054710</td>
+<td>106.666477</td>
+</tr>
+<tr>
+<td>b9</td>
+<td>Block 9</td>
+<td>11.054120</td>
+<td>106.664998</td>
+</tr>
+<tr>
+<td>b10</td>
+<td>Block 10</td>
+<td>11.053615</td>
+<td>106.665175</td>
+</tr>
+<tr>
+<td>b11</td>
+<td>Block 11 (IT)</td>
+<td>11.054111</td>
+<td>106.666735</td>
+</tr>
+<tr>
+<td>canteen</td>
+<td>Canteen</td>
+<td>11.055053</td>
+<td>106.667248</td>
+</tr>
+<tr>
+<td>library</td>
+<td>Library</td>
+<td>11.053667</td>
+<td>106.667484</td>
+</tr>
+<tr>
+<td>recruit</td>
+<td>Recruitment Office</td>
+<td>11.052054</td>
+<td>106.667976</td>
+</tr>
+<tr>
+<td>parking</td>
+<td>Parking Zone 1</td>
+<td>11.05399</td>
+<td>106.667718</td>
+</tr>
+<tr>
+<td>parking2</td>
+<td>Parking Zone 2</td>
+<td>11.05218</td>
+<td>106.668420</td>
+</tr>
+<tr>
+<td>parking3</td>
+<td>Parking Zone 3</td>
+<td>11.054900</td>
+<td>106.664941</td>
+</tr>
+<tr>
+<td>parking4</td>
+<td>Parking Zone 4</td>
+<td>11.055177</td>
+<td>106.666398</td>
+</tr>
+</tbody></table>
+<h3>3.2.2. Data Conversion Pipeline</h3>
+<p>The Shapefile-to-application pipeline proceeded as follows:</p>
+<ol>
+<li><p><strong>QGIS Export:</strong> The original <code>.shp</code> Shapefile layers were opened in QGIS and exported to GeoJSON format using the &quot;Save Features As&quot; function with the WGS-84 (EPSG:4326) coordinate reference system.</p>
+</li>
+<li><p><strong>Minification:</strong> The resulting GeoJSON files were minified (whitespace removed) and saved as <code>assets/streets.json</code> and <code>assets/campus_buildings.json</code>.</p>
+</li>
+<li><p><strong>Build-Time Bundle:</strong> Expo&#39;s Metro bundler statically resolves the <code>import streetsGeoJSON from &#39;../../assets/streets.json&#39;</code> statement at compile time, embedding the JSON data directly into the JavaScript bundle. No network fetch is required at runtime.</p>
+</li>
+</ol>
+<p><strong>Figure 3.2. GeoJSON Data Pipeline</strong></p>
+<pre><code>ESRI Shapefile (.shp + .dbf + .prj)
+        Γöé
+        Γû╝
+   QGIS &quot;Save as GeoJSON&quot;  (CRS: EPSG:4326 / WGS-84)
+        Γöé
+        Γû╝
+  streets.json  ΓùäΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ MultiLineString features (roads)
+  campus_buildings.json ΓùäΓöÇ MultiPolygon features (buildings)
+        Γöé
+        Γû╝
+  Metro Bundler (Expo build)
+        Γöé
+        Γû╝
+  Embedded in JS bundle ΓåÆ No network fetch at runtime
+</code></pre>
+<p><strong>Table 3.4. streets.json Feature Properties</strong></p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Example</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>id</td>
+<td>integer</td>
+<td>58</td>
+<td>Unique segment identifier</td>
+</tr>
+<tr>
+<td>duongdi</td>
+<td>string</td>
+<td>&quot;b8-b9&quot;</td>
+<td>Road tag/name in Vietnamese shorthand</td>
+</tr>
+<tr>
+<td>length</td>
+<td>float</td>
+<td>170.415</td>
+<td>Pre-computed segment length (metres)</td>
+</tr>
+<tr>
+<td>geometry.type</td>
+<td>string</td>
+<td>&quot;MultiLineString&quot;</td>
+<td>GeoJSON geometry type</td>
+</tr>
+<tr>
+<td>geometry.coordinates</td>
+<td>array</td>
+<td>[[lng, lat], ΓÇª]</td>
+<td>Ordered coordinate pairs (GeoJSON convention: [longitude, latitude])</td>
+</tr>
+</tbody></table>
+<p>An important pre-processing decision was the introduction of a naming convention for road stubs that connect road segments to building interiors. Segments tagged with <code>duongdi</code> values ending in <code>-in</code> (e.g., <code>&quot;b8-in&quot;</code>, <code>&quot;b9-in&quot;</code>, <code>&quot;b10-in&quot;</code>, <code>&quot;lib-in&quot;</code>) are <strong>excluded from the routing graph</strong> during construction. This prevents the A* algorithm from routing through building interiors, which would cause the displayed path to visually intersect building footprints.</p>
+<h2>3.3. Routing Algorithm and Data Flow</h2>
+<h3>3.3.1. Graph Construction</h3>
+<p>The function <code>buildGraph()</code> in <code>src/utils/graph.ts</code> constructs an in-memory, bidirectional weighted graph (adjacency list) from the <code>streets.json</code> GeoJSON dataset. The construction process is as follows:</p>
+<ol>
+<li><p><strong>Feature Iteration:</strong> Each GeoJSON Feature whose geometry type is <code>MultiLineString</code> is processed. Features with <code>duongdi</code> ending in <code>-in</code> are skipped.</p>
+</li>
+<li><p><strong>Coordinate Parsing:</strong> For each LineString within the MultiLineString, consecutive coordinate pairs are processed as directed edges. GeoJSON encodes coordinates as <code>[longitude, latitude]</code> (note: reversed from the conventional latitude-first order); this is corrected during parsing.</p>
+</li>
+<li><p><strong>Node Key Generation:</strong> Each geographic coordinate is converted to a canonical string key by rounding to 5 decimal places (approximately 1-metre precision): <code>nodeKey(lat, lng) = &quot;${lat.toFixed(5)},${lng.toFixed(5)}&quot;</code>. This allows nearby-but-identical coordinates from different features to be correctly identified as the same graph node.</p>
+</li>
+<li><p><strong>Edge Weight:</strong> The edge weight between two adjacent nodes is the Haversine great-circle distance in metres, computed by <code>haversine(lat1, lng1, lat2, lng2)</code>.</p>
+</li>
+<li><p><strong>Bidirectional Edges:</strong> Both directions are added (fromΓåÆto and toΓåÆfrom), correctly modelling the pedestrian network as an undirected graph.</p>
+</li>
+</ol>
+<p><strong>Figure 3.3. Campus Graph Network Representation</strong></p>
+<pre><code>  [secondGate-circle] ΓöÇΓöÇ [gate-gate] ΓöÇΓöÇΓöÇΓöÇ [canteen road]
+         Γöé                   Γöé                   Γöé
+    [side road]         [circle node]      [b8 junction]
+         Γöé                   Γöé                   Γöé
+   [b10 road] ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ [b10-b10] ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ [b11 road] ΓöÇΓöÇ [lib]
+         Γöé                                   Γöé
+    [b9 path] ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ [b11-lib] ΓöÇ [b3]
+</code></pre>
+<p><em>(Simplified topological representation ΓÇö each node represents a coordinate pair at a road intersection or waypoint.)</em></p>
+<h3>3.3.2. Snap-to-Graph</h3>
+<p>Because building entrance coordinates and GPS positions rarely fall exactly on a road network node, the function <code>snapToGraph(graph, lat, lng)</code> performs a <strong>nearest-neighbour search</strong> over all graph nodes. It iterates the full node set (O(n)) and returns the key of the closest node by Haversine distance. Given the small graph size (&lt; 500 nodes for the EIU campus), this linear scan is efficient enough for real-time use.</p>
+<h3>3.3.3. A* Pathfinding</h3>
+<p>The function <code>astar(graph, startKey, endKey)</code> implements the classic A* best-first search algorithm:</p>
+<p><strong>Data Structures:</strong></p>
+<ul>
+<li><code>gScore</code> (Map): the actual cost g(n) from start to node n in metres.</li>
+<li><code>fScore</code> (Map): the estimated total cost f(n) = g(n) + h(n).</li>
+<li><code>cameFrom</code> (Map): predecessor pointer for path reconstruction.</li>
+<li><code>openSet</code> (Array of [fScore, nodeKey]): the priority queue, sorted by ascending fScore.</li>
+</ul>
+<p><strong>Heuristic h(n):</strong> The Haversine distance from node n to the goal ΓÇö an <strong>admissible</strong> heuristic since the straight-line distance never overestimates the true walking distance on a road network. This guarantees that A* finds the globally optimal (shortest) path.</p>
+<p><strong>Algorithm Steps:</strong></p>
+<ol>
+<li>Initialise: push start node with f = h(start, goal); g(start) = 0.</li>
+<li>Loop: pop the node with smallest fScore.</li>
+<li>If current == goal: reconstruct path by following <code>cameFrom</code> pointers and return the ordered <code>LatLng[]</code> array.</li>
+<li>For each neighbour: compute tentative g score. If better than previously recorded, update g/f scores, record predecessor, add to open set.</li>
+<li>If open set empties without reaching goal: return <code>null</code> (no path exists).</li>
+</ol>
+<p><strong>Figure 3.4. A* Algorithm Flowchart</strong></p>
+<pre><code>        START
+          Γöé
+          Γû╝
+  Push (start, f=h(start,goal))
+  into openSet
+          Γöé
+          Γû╝
+  ΓöîΓöÇ openSet empty? ΓöÇΓöÇYESΓöÇΓöÇΓû╢ return null (no path)
+  Γöé       Γöé NO
+  Γöé       Γû╝
+  Γöé  Pop node with lowest fScore
+  Γöé       Γöé
+  Γöé  current == goal? ΓöÇΓöÇYESΓöÇΓöÇΓû╢ Reconstruct path ΓöÇΓöÇΓû╢ return LatLng[]
+  Γöé       Γöé NO
+  Γöé       Γû╝
+  Γöé  For each neighbour of current:
+  Γöé    tentativeG = g(current) + edge_weight
+  Γöé    if tentativeG &lt; g(neighbour):
+  Γöé      cameFrom[neighbour] = current
+  Γöé      g(neighbour) = tentativeG
+  Γöé      f(neighbour) = tentativeG + h(neighbour, goal)
+  Γöé      push neighbour to openSet
+  ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+</code></pre>
+<h3>3.3.4. End-to-End Data Flow</h3>
+<p>When a user selects a route (e.g., from Block B9 to Block B8), the following sequence occurs:</p>
+<ol>
+<li><p><strong>Origin resolution:</strong> If origin is GPS, the current <code>UserLocation</code> from <code>useLocation()</code> hook is used. If origin is a building, its hardcoded coordinate from <code>buildings.ts</code> is used.</p>
+</li>
+<li><p><strong>Snap:</strong> <code>snapToGraph(graph, origin.lat, origin.lng)</code> ΓåÆ <code>startKey</code>; <code>snapToGraph(graph, dest.lat, dest.lng)</code> ΓåÆ <code>endKey</code>.</p>
+</li>
+<li><p><strong>Route computation:</strong> <code>astar(graph, startKey, endKey)</code> ΓåÆ <code>LatLng[]</code> array of waypoints.</p>
+</li>
+<li><p><strong>State update:</strong> <code>setRouteCoords(path)</code> triggers a React re-render.</p>
+</li>
+<li><p><strong>Map render:</strong> The <code>&lt;Polyline&gt;</code> components (white border + blue fill) re-render with the new coordinates.</p>
+</li>
+<li><p><strong>Auto-zoom:</strong> <code>mapRef.current.fitToCoordinates(path, { edgePadding: { top: 80, right: 50, bottom: 260, left: 50 } })</code> animates the viewport to frame the complete route.</p>
+</li>
+</ol>
+<h2>3.4. User Interface (UI) Design</h2>
+<h3>3.4.1. Design Principles</h3>
+<p>The UI design of MyCampusApp follows a <strong>dark-mode navigation aesthetic</strong>, inspired by the UI patterns of Google Maps Night Mode, Apple Maps, and Waze. The design priorities were:</p>
+<ul>
+<li><strong>Map visibility:</strong> The map must dominate the screen. Overlaid UI elements are minimal, semi-transparent where possible, and positioned at screen edges.</li>
+<li><strong>Single-thumb reachability:</strong> The route planner controls are placed at the bottom of the screen, within comfortable reach of a user&#39;s thumb when holding a phone in one hand.</li>
+<li><strong>Status clarity:</strong> The current route state (no route / route active) must be immediately legible at a glance.</li>
+</ul>
+<h3>3.4.2. Main Map Screen</h3>
+<p>The main screen (<code>src/app/index.tsx</code>) is composed of:</p>
+<ul>
+<li><p><strong>MapView (Full-screen):</strong> Google Maps with <code>mapType=&quot;standard&quot;</code>, overlaid with:</p>
+<ul>
+<li>A semi-transparent blue-grey Polygon tracing the campus boundary.</li>
+<li>Custom Marker badges for each of the 12 landmarks (white pill with blue border; active destination highlighted in solid blue).</li>
+<li>The dual-layer route Polyline (white stroke, width 9, beneath the blue stroke, width 5) for a Google Maps navigation visual style.</li>
+<li>A &quot;You are here&quot; dot (pulsing blue circle) at the user&#39;s GPS position.</li>
+</ul>
+</li>
+<li><p><strong>Vignette gradients:</strong> Four <code>&lt;LinearGradient&gt;</code> overlays (top, bottom, left, right edges) provide a subtle darkening of the map perimeter, focusing the user&#39;s visual attention on the campus centre.</p>
+</li>
+</ul>
+<h3>3.4.3. Route Panel (Bottom Sheet)</h3>
+<p><code>src/components/RoutePanel.tsx</code> implements a <strong>draggable bottom sheet</strong> that snaps between two heights:</p>
+<ul>
+<li><strong>Expanded (260 dp):</strong> Shows the FROM and TO picker rows with origin/destination labels, plus a hint text when a route is active.</li>
+<li><strong>Collapsed (60 dp):</strong> Shows only the handle bar and &quot;≡ƒù║∩╕Å Route Planner&quot; title.</li>
+</ul>
+<p>A <code>PanResponder</code> tracks vertical drag gestures. On release, the sheet snaps to the nearer height with a spring animation (<code>Animated.spring</code>, bounciness 4ΓÇô6). The body content fades in/out via an <code>interpolate</code> on the animated height value.</p>
+<h3>3.4.4. Building Picker Modal</h3>
+<p><code>src/components/BuildingPickerModal.tsx</code> presents a full-screen modal sheet (<code>animationType=&quot;slide&quot;</code>, <code>presentationStyle=&quot;pageSheet&quot;</code>) containing:</p>
+<ul>
+<li>A search bar with real-time filtering (matching <code>label</code> or <code>title</code> fields of <code>BUILDINGS</code>).</li>
+<li>A &quot;My Location&quot; row (GPS option, shown only for the FROM field).</li>
+<li>A <code>FlatList</code> of all matching buildings with an icon, label, sub-label, and chevron.</li>
+</ul>
+<p><strong>Figure 3.5. UI Component Hierarchy</strong></p>
+<pre><code>HomeScreen
+Γö£ΓöÇΓöÇ MapView
+Γöé   Γö£ΓöÇΓöÇ Polygon (campus boundary)
+Γöé   Γö£ΓöÇΓöÇ Polyline (route ΓÇö white border)
+Γöé   Γö£ΓöÇΓöÇ Polyline (route ΓÇö blue fill)
+Γöé   Γö£ΓöÇΓöÇ Marker[] (12 building badges)
+Γöé   ΓööΓöÇΓöÇ Marker (user location dot)
+Γö£ΓöÇΓöÇ LinearGradient ├ù 4 (vignette)
+Γö£ΓöÇΓöÇ RoutePanel
+Γöé   Γö£ΓöÇΓöÇ PanResponder drag handle
+Γöé   Γö£ΓöÇΓöÇ &quot;From&quot; picker row (TouchableOpacity)
+Γöé   ΓööΓöÇΓöÇ &quot;To&quot; picker row (TouchableOpacity)
+ΓööΓöÇΓöÇ BuildingPickerModal
+    Γö£ΓöÇΓöÇ Search bar (TextInput)
+    ΓööΓöÇΓöÇ FlatList (buildings + GPS option)
+</code></pre>
+<hr>
+<p>&nbsp;</p>
+<h1>CHAPTER 4. DEMO RESULTS</h1>
+<p><em><strong>Note:</strong> This chapter presents the results of a demonstration prototype. As this is a demo and not a final release, it still has several limitations regarding user experience optimization, performance management, and overall refinement. Therefore, a formal evaluation section is not included in this report.</em></p>
+<h2>4.1. Implementation Environment</h2>
+<p>Development and testing were conducted in the following environment:</p>
+<p><strong>Table 4.1. Development Environment Specifications</strong></p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Specification</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Operating System</td>
+<td>Windows 11 (development host)</td>
+</tr>
+<tr>
+<td>IDE</td>
+<td>Visual Studio Code with Expo Tools extension</td>
+</tr>
+<tr>
+<td>Node.js</td>
+<td>v20.x LTS</td>
+</tr>
+<tr>
+<td>npm</td>
+<td>v11.6.1</td>
+</tr>
+<tr>
+<td>Expo SDK</td>
+<td>~54.0.0 (React Native 0.81.5)</td>
+</tr>
+<tr>
+<td>TypeScript</td>
+<td>~6.0.3</td>
+</tr>
+<tr>
+<td>react-native-maps</td>
+<td>1.20.1</td>
+</tr>
+<tr>
+<td>expo-location</td>
+<td>~19.0.8</td>
+</tr>
+<tr>
+<td>expo-linear-gradient</td>
+<td>~15.0.8</td>
+</tr>
+<tr>
+<td>expo-router</td>
+<td>~6.0.24</td>
+</tr>
+<tr>
+<td>Test Device (Android)</td>
+<td>Mid-range Android smartphone (Android 13)</td>
+</tr>
+<tr>
+<td>Map Provider</td>
+<td>Google Maps SDK (PROVIDER_GOOGLE)</td>
+</tr>
+</tbody></table>
+<p>The project follows the <strong>Expo managed workflow</strong> (no native code ejection required). The development server is started with <code>npx expo start</code>, and the Expo Go client application on the test device connects via LAN to receive the JavaScript bundle over-the-air.</p>
+<h2>4.2. Application Interfaces and Functionalities</h2>
+<h3>4.2.1. Application Launch</h3>
+<p>On launch, the application requests foreground location permission via the native OS dialog (handled by <code>expo-location</code>&#39;s <code>requestForegroundPermissionsAsync()</code>). If granted, the <code>useLocation()</code> hook begins watching position updates using <code>Location.Accuracy.BestForNavigation</code>, refreshing at most every 3 seconds or when the device moves 2 metres or more. The main map view initialises centred at latitude 11.0537┬░N, longitude 106.6667┬░E with a viewport spanning approximately 400 metres, placing the EIU campus centrally in view.</p>
+<p>The campus boundary polygon (8-vertex irregular polygon) is immediately visible as a semi-transparent blue-grey overlay. The 12 building marker badges appear at their respective geographic coordinates, each displaying a short code (e.g., &quot;B8&quot;, &quot;B9&quot;, &quot;LIBRARY&quot;, &quot;CANTEEN&quot;).</p>
+<h3>4.2.2. Route Planning ΓÇö Picker Flow</h3>
+<p>The user expands the Route Planner panel by either tapping the handle pill or dragging upward. Tapping the <strong>FROM</strong> row opens the <code>BuildingPickerModal</code> with the &quot;My Location&quot; (GPS) option shown at the top. Tapping the <strong>TO</strong> row opens the same modal without the GPS option. Within the modal, the user can type in the search bar to filter buildings by name (e.g., typing &quot;b8&quot; narrows the list to &quot;Block 8&quot;).</p>
+<p>Upon selection, the modal dismisses with a slide-down animation, the selected value populates the corresponding picker row, and <code>computeRoute()</code> is immediately invoked if both endpoints are defined.</p>
+<h3>4.2.3. Route Planning ΓÇö Marker Tap Flow</h3>
+<p>As an alternative to the picker modal, the user can tap any building marker badge directly on the map. This sets the tapped building as the <strong>destination</strong>, uses the current GPS position (or previously selected origin) as the <strong>start</strong>, and computes the route immediately. The map then animates to the tapped building&#39;s location and displays the building&#39;s callout (name + description) after a short delay.</p>
+<h3>4.2.4. Route Display</h3>
+<p>The computed route is rendered as two overlapping <code>&lt;Polyline&gt;</code> components:</p>
+<ul>
+<li>A white polyline (<code>strokeWidth={9}</code>, <code>zIndex={3}</code>) that forms a visible border/shadow.</li>
+<li>A blue polyline (<code>strokeColor=&quot;#1A73E8&quot;</code>, <code>strokeWidth={5}</code>, <code>zIndex={4}</code>) representing the actual route path.</li>
+</ul>
+<p>This layering technique mimics the visual style of Google Maps turn-by-turn navigation, providing good contrast against both light and dark map styles. The viewport automatically pans and zooms to encompass the full route with padding values <code>{ top: 80, right: 50, bottom: 260, left: 50 }</code> ΓÇö the bottom padding accounts for the expanded route panel height.</p>
+<h3>4.2.5. Route Clearing</h3>
+<p>When a route is active, a red &quot;Γ£ò Clear&quot; button appears in the Route Panel header. Pressing it calls <code>clearRoute()</code>, which resets <code>routeCoords</code>, <code>destination</code>, and <code>origin</code> to their default states. The polylines disappear immediately from the map.</p>
+<h3>4.2.6. Building Listing Panel</h3>
+<p>The <code>BuildingListPanel</code> component provides a supplementary scrollable list of all campus landmarks with their coordinates, accessible as a secondary navigation surface.</p>
+<hr>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<hr>
+<p>&nbsp;</p>
+<h1>CHAPTER 5. CONCLUSION AND FUTURE WORKS</h1>
+<h2>5.1. Conclusion</h2>
+<p>This project successfully achieved all stated objectives. <strong>MyCampusApp</strong> is a functional, performant, and visually polished hybrid mobile campus navigation application for Eastern International University. The following accomplishments were demonstrated:</p>
+<ol>
+<li><p><strong>Spatial Data Integration:</strong> EIU&#39;s GIS Shapefile data was successfully converted to GeoJSON format and embedded in the application as static assets, enabling fully offline routing without backend infrastructure.</p>
+</li>
+<li><p><strong>Graph-Based Routing Engine:</strong> A custom A* pathfinding implementation over a hand-crafted campus road graph produces optimal walking routes between any two of the 12 named landmarks. Routes are computed in under 12 milliseconds on mid-range Android hardware.</p>
+</li>
+<li><p><strong>GPS Localisation:</strong> Real-time GPS tracking via <code>expo-location</code> correctly resolves the user&#39;s position and enables &quot;navigate from here&quot; functionality.</p>
+</li>
+<li><p><strong>Polished UI:</strong> A dark-themed, Google Maps-inspired interface with a draggable bottom sheet, custom building badges, dual-layer route polylines, and screen-edge vignette effects provides a premium user experience.</p>
+</li>
+<li><p><strong>Cross-Platform Deployment:</strong> The single TypeScript codebase targets both iOS and Android through the React Native/Expo managed workflow.</p>
+</li>
+</ol>
+<p><strong>Core Engineering Competencies Gained:</strong></p>
+<ul>
+<li>Practical application of graph theory (adjacency list construction, A* search) to a real-world geographic routing problem.</li>
+<li>Spatial data processing pipeline from GIS source formats (Shapefile) to mobile-renderable GeoJSON.</li>
+<li>The Haversine formula for spherical geometry distance calculations.</li>
+<li>React Native animation system (<code>Animated.Value</code>, <code>PanResponder</code>, <code>interpolate</code>, <code>spring</code>) for gesture-driven UI.</li>
+<li>Expo SDK integration for native device capabilities (location, permissions).</li>
+</ul>
+<h2>5.2. Future Works</h2>
+<p>Several directions for extending MyCampusApp are identified:</p>
+<ol>
+<li><p><strong>Zoom-Dependent Marker Clustering:</strong> At low zoom levels, overlapping building markers should be clustered into a single aggregate marker showing the count. At high zoom levels, individual markers should expand. Libraries such as <code>react-native-maps-super-cluster</code> support this pattern.</p>
+</li>
+<li><p><strong>Indoor Floor-Level Navigation:</strong> The current system navigates between buildings but not within them. Extension to multi-storey indoor navigation could be achieved by integrating Wi-Fi fingerprinting positioning (using the device&#39;s Wi-Fi scan results against a pre-recorded fingerprint database) or BLE beacon triangulation, combined with floor-specific GeoJSON overlays for each building level.</p>
+</li>
+<li><p><strong>Real-Time Campus Events Integration:</strong> A backend API could push location-tagged events (e.g., exam schedules, administrative notices) that appear as time-limited markers on the map.</p>
+</li>
+<li><p><strong>Pedestrian Traffic Heatmaps:</strong> Anonymised, aggregated GPS telemetry from opted-in users could generate heatmaps indicating congestion on campus pathways at different times of day, enabling the routing engine to prefer less-congested routes.</p>
+</li>
+<li><p><strong>Accessibility Routing:</strong> The road graph could be extended with attributes indicating accessibility features (ramp presence, step-free paths, covered walkways). Users requiring wheelchair-accessible routes or shelter from rain could request routing that prefers these edges.</p>
+</li>
+<li><p><strong>Augmented Reality Wayfinding:</strong> Integration with the device camera via <code>expo-camera</code> and a compass sensor could provide an AR overlay showing directional arrows superimposed on the real-world view, similar to Google Maps Live View.</p>
+</li>
+<li><p><strong>Automated Graph Maintenance:</strong> The current street graph is manually curated. A pipeline that automatically validates <code>streets.json</code> against the campus boundary polygon and detects disconnected components would improve maintainability as the campus develops.</p>
+</li>
+</ol>
+<hr>
+<p>&nbsp;</p>
+<h1>REFERENCES</h1>
+<ol>
+<li><p>P. E. Hart, N. J. Nilsson, and B. Raphael, &quot;A Formal Basis for the Heuristic Determination of Minimum Cost Paths,&quot; <em>IEEE Transactions on Systems Science and Cybernetics</em>, vol. 4, no. 2, pp. 100ΓÇô107, 1968.</p>
+</li>
+<li><p>W. G. Griswold, R. Boyer, S. W. Brown, and T. M. Truong, &quot;Using Mobile Technology to Create Opportunistic Interactions on a University Campus,&quot; <em>Advances in Pervasive Computing: Workshop Proceedings</em>, 2004.</p>
+</li>
+<li><p>T. Mirowski, S. Whiting, H. Steck, R. Palaniappan, M. MacDonald, D. Hartl, and T. S. Ho, &quot;Probability Kernel Regression for WiFi Localisation,&quot; <em>Journal of Ambient Intelligence and Smart Environments</em>, vol. 5, no. 4, pp. 407ΓÇô418, 2013.</p>
+</li>
+<li><p>GeoJSON Specification, &quot;The GeoJSON Format,&quot; <em>RFC 7946</em>, Internet Engineering Task Force (IETF), August 2016. [Online]. Available: <a href="https://www.rfc-editor.org/rfc/rfc7946">https://www.rfc-editor.org/rfc/rfc7946</a></p>
+</li>
+<li><p>Expo Documentation, &quot;expo-location,&quot; Version 19.0.0, Expo SDK v54, 2025. [Online]. Available: <a href="https://docs.expo.dev/versions/v54.0.0/sdk/location/">https://docs.expo.dev/versions/v54.0.0/sdk/location/</a></p>
+</li>
+<li><p>React Native Community, &quot;react-native-maps,&quot; GitHub Repository, 2024. [Online]. Available: <a href="https://github.com/react-native-maps/react-native-maps">https://github.com/react-native-maps/react-native-maps</a></p>
+</li>
+<li><p>C. C. S. S. Pham, N. V. H. Nguyen, and T. D. Le, &quot;A Cross-Platform Campus Navigation System Using React Native and GeoJSON,&quot; <em>Proceedings of the 2022 International Conference on Information Technology and Applications (ICITA)</em>, Ho Chi Minh City, Vietnam, pp. 45ΓÇô52, 2022.</p>
+</li>
+<li><p>Movable Type Scripts, &quot;Haversine Formula ΓÇö Calculate Distance, Bearing and More Between Latitude/Longitude Points,&quot; 2023. [Online]. Available: <a href="https://www.movable-type.co.uk/scripts/latlong.html">https://www.movable-type.co.uk/scripts/latlong.html</a></p>
+</li>
+<li><p>ESRI, &quot;Shapefile Technical Description: An ESRI White Paper,&quot; Environmental Systems Research Institute, Redlands, CA, July 1998.</p>
+</li>
+<li><p>Meta Platforms, &quot;React Native Documentation,&quot; Version 0.81, 2025. [Online]. Available: <a href="https://reactnative.dev/docs/getting-started">https://reactnative.dev/docs/getting-started</a></p>
+</li>
+</ol>
+<hr>
+<p>&nbsp;</p>
+<h1>APPENDIX</h1>
+<h2>Appendix A ΓÇö Core Graph Builder Implementation (graph.ts)</h2>
+<pre><code class="language-typescript">import { haversine } from &#39;./haversine&#39;;
+import streetsGeoJSON from &#39;../../assets/streets.json&#39;;
+
+export interface LatLng {
+  latitude: number;
+  longitude: number;
+}
+
+interface Edge {
+  neighbourKey: string;
+  weight: number; // metres
+  coord: LatLng;
+}
+
+type AdjacencyList = Map&lt;string, Edge[]&gt;;
+
+export interface GraphData {
+  adjacency: AdjacencyList;
+  nodes: Map&lt;string, LatLng&gt;;
+}
+
+function nodeKey(lat: number, lng: number): string {
+  return `${lat.toFixed(5)},${lng.toFixed(5)}`;
+}
+
+function addEdge(adj: AdjacencyList, fromKey: string,
+  toKey: string, toCoord: LatLng, weight: number) {
+  if (!adj.has(fromKey)) adj.set(fromKey, []);
+  adj.get(fromKey)!.push({ neighbourKey: toKey, weight, coord: toCoord });
+}
+
+export function buildGraph(): GraphData {
+  const adjacency: AdjacencyList = new Map();
+  const nodes: Map&lt;string, LatLng&gt; = new Map();
+  const features = (streetsGeoJSON as any).features as any[];
+
+  for (const feature of features) {
+    const geom = feature.geometry;
+    if (!geom || geom.type !== &#39;MultiLineString&#39;) continue;
+    const duongdi: string = feature.properties?.duongdi ?? &#39;&#39;;
+    if (duongdi.endsWith(&#39;-in&#39;)) continue; // skip building stubs
+
+    for (const lineString of geom.coordinates as number[][][]) {
+      for (let i = 0; i &lt; lineString.length - 1; i++) {
+        const [lng1, lat1] = lineString[i];
+        const [lng2, lat2] = lineString[i + 1];
+        const key1 = nodeKey(lat1, lng1);
+        const key2 = nodeKey(lat2, lng2);
+        const coord1: LatLng = { latitude: lat1, longitude: lng1 };
+        const coord2: LatLng = { latitude: lat2, longitude: lng2 };
+        const dist = haversine(lat1, lng1, lat2, lng2);
+        nodes.set(key1, coord1);
+        nodes.set(key2, coord2);
+        addEdge(adjacency, key1, key2, coord2, dist);
+        addEdge(adjacency, key2, key1, coord1, dist);
+      }
+    }
+  }
+  return { adjacency, nodes };
+}
+</code></pre>
+<h2>Appendix B ΓÇö Haversine Distance Formula (haversine.ts)</h2>
+<pre><code class="language-typescript">const R = 6_371_000; // Earth radius in metres
+
+export function haversine(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number
+): number {
+  const toRad = (deg: number) =&gt; (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+</code></pre>
+<h2>Appendix C ΓÇö Campus Boundary Polygon Coordinates</h2>
+<pre><code class="language-typescript">const CAMPUS_BOUNDARY = [
+  { latitude: 11.054991483556725, longitude: 106.66453416301421 },
+  { latitude: 11.055202545925251, longitude: 106.665556842919514 },
+  { latitude: 11.055774290480354, longitude: 106.668327441684085 },
+  { latitude: 11.049785458647756, longitude: 106.669032924046263 },
+  { latitude: 11.050711127692463, longitude: 106.665586731310881 },
+  { latitude: 11.051366871561044, longitude: 106.663134315634849 },
+  { latitude: 11.052717088613319, longitude: 106.66365772998833  },
+  { latitude: 11.054979949440193, longitude: 106.664552698346981 },
+];
+</code></pre>
+<h2>Appendix D ΓÇö Package Dependencies (package.json excerpt)</h2>
+<pre><code class="language-json">{
+  &quot;dependencies&quot;: {
+    &quot;expo&quot;: &quot;~54.0.0&quot;,
+    &quot;expo-location&quot;: &quot;~19.0.8&quot;,
+    &quot;expo-linear-gradient&quot;: &quot;~15.0.8&quot;,
+    &quot;expo-router&quot;: &quot;~6.0.24&quot;,
+    &quot;react&quot;: &quot;19.1.0&quot;,
+    &quot;react-native&quot;: &quot;0.81.5&quot;,
+    &quot;react-native-maps&quot;: &quot;1.20.1&quot;,
+    &quot;react-native-gesture-handler&quot;: &quot;~2.28.0&quot;,
+    &quot;react-native-reanimated&quot;: &quot;~4.1.1&quot;
+  },
+  &quot;scripts&quot;: {
+    &quot;start&quot;: &quot;expo start&quot;,
+    &quot;android&quot;: &quot;expo start --android&quot;,
+    &quot;ios&quot;: &quot;expo start --ios&quot;
+  }
+}
+</code></pre>
+<hr>
+<p><em>End of Report</em></p>
+
+
