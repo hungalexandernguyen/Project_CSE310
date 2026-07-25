@@ -14,6 +14,7 @@ import MapView, {
 } from 'react-native-maps';
 
 import { LinearGradient } from 'expo-linear-gradient';
+import BuildingInfoSheet from '../components/BuildingInfoSheet';
 import BuildingPickerModal, { PickerSelection } from '../components/BuildingPickerModal';
 import RoutePanel, { RouteOrigin } from '../components/RoutePanel';
 import { Building, BUILDINGS } from '../constants/buildings';
@@ -45,6 +46,9 @@ export default function HomeScreen() {
   // Origin: null = use GPS by default, 'gps' = explicit GPS, Building = a chosen building
   const [origin, setOrigin] = useState<RouteOrigin>(null);
   const [destination, setDestination] = useState<Building | null>(null);
+
+  // Building info sheet — shown when tapping a marker
+  const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
 
   // Which picker is open: 'from' | 'to' | null
   const [pickingField, setPickingField] = useState<'from' | 'to' | null>(null);
@@ -104,19 +108,20 @@ export default function HomeScreen() {
       {
         latitude: building.coordinate.latitude,
         longitude: building.coordinate.longitude,
-        latitudeDelta: 0.003,
-        longitudeDelta: 0.003,
+        latitudeDelta: 0.006,
+        longitudeDelta: 0.006,
       },
       700
     );
-    setTimeout(() => {
-      markerRefs.current[building.id]?.showCallout();
-    }, 800);
+    // Open the info sheet — route is only computed when user presses "Chỉ đường"
+    setSelectedBuilding(building);
+  };
 
-    // Set as destination and compute route
-    const newDest = building;
-    setDestination(newDest);
-    computeRoute(origin, newDest);
+  // ── Handle "Chỉ đường" button in the info sheet ──────────────────────────────
+  const handleNavigate = (building: Building) => {
+    setSelectedBuilding(null);
+    setDestination(building);
+    computeRoute(origin, building);
   };
 
   // ── Picker callbacks ────────────────────────────────────────────────────────
@@ -203,8 +208,6 @@ export default function HomeScreen() {
               markerRefs.current[building.id] = ref;
             }}
             coordinate={building.coordinate}
-            title={building.label}
-            description={building.description}
             onPress={() => handleMarkerPress(building)}
             anchor={{ x: 0.5, y: 1 }}
             zIndex={10}
@@ -261,6 +264,13 @@ export default function HomeScreen() {
         end={{ x: 1, y: 0.5 }}
         style={styles.vignetteRight}
         pointerEvents="none"
+      />
+
+      {/* Building info sheet — slides up when a marker is tapped */}
+      <BuildingInfoSheet
+        building={selectedBuilding}
+        onNavigate={handleNavigate}
+        onClose={() => setSelectedBuilding(null)}
       />
 
       {/* Route Panel */}

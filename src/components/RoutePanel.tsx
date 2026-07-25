@@ -180,13 +180,7 @@ export default function RoutePanel({
         </TouchableOpacity>
 
         {/* Distance hint */}
-        {hasRoute && (
-          <View style={styles.hintRow}>
-            <Text style={styles.hintText}>
-              Route computed via A* · tap a building to re-route
-            </Text>
-          </View>
-        )}
+
       </Animated.View>
     </Animated.View>
   );
