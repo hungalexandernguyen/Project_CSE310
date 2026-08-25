@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { router } from 'expo-router';
 import { Building } from '../constants/buildings';
+import { INDOOR_MAPS } from '../constants/indoorMaps';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = 280;
 
-// Map building id → icon emoji
+// Map building id → icon emoji;
 function buildingIcon(id: string): string {
   if (id.startsWith('parking')) return '🅿️';
   if (id === 'canteen') return '🍽️';
@@ -72,7 +74,6 @@ export default function BuildingInfoSheet({ building, onNavigate, onClose }: Pro
         <View style={styles.sheetInner}>
           {/* ── Handle bar ── */}
           <View style={styles.handleBarWrapper}>
-            <View style={styles.handleBar} />
           </View>
 
           {/* ── Close button ── */}
@@ -100,22 +101,27 @@ export default function BuildingInfoSheet({ building, onNavigate, onClose }: Pro
             {displayed.description}
           </Text>
 
-          {/* ── Coordinates ── */}
-          <View style={styles.coordRow}>
-            <Text style={styles.coordLabel}>📍</Text>
-            <Text style={styles.coordText}>
-              {displayed.coordinate.latitude.toFixed(6)}, {displayed.coordinate.longitude.toFixed(6)}
-            </Text>
-          </View>
 
-          {/* ── Navigate button ── */}
-          <TouchableOpacity
-            style={styles.navigateBtn}
-            activeOpacity={0.85}
-            onPress={() => onNavigate(displayed)}
-          >
-            <Text style={styles.navigateBtnText}>🧭  Chỉ đường</Text>
-          </TouchableOpacity>
+          {/* ── Action Buttons ── */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.navigateBtn]}
+              activeOpacity={0.85}
+              onPress={() => onNavigate(displayed)}
+            >
+              <Text style={styles.actionBtnText}>🧭 Routing</Text>
+            </TouchableOpacity>
+
+            {!!INDOOR_MAPS[displayed.id] && (
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.indoorBtn]}
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/indoor' as any, params: { buildingId: displayed.id } })}
+              >
+                <Text style={styles.actionBtnText}>🏢 Sơ đồ trong nhà</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </Animated.View>
     </View>
@@ -256,21 +262,27 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace' as any,
   },
 
-  // Navigate CTA
-  navigateBtn: {
-    backgroundColor: '#1A73E8',
+  // Action Buttons
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionBtn: {
+    flex: 1,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: '#1A73E8',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
+    elevation: 4,
   },
-  navigateBtnText: {
+  navigateBtn: {
+    backgroundColor: '#1A73E8',
+  },
+  indoorBtn: {
+    backgroundColor: '#34A853',
+  },
+  actionBtnText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.4,
   },
