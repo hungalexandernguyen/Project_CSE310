@@ -17,7 +17,7 @@ import Floor3B10 from '../../assets/B10/Floor_3.svg';
 export const INDOOR_VIEWBOXES: Record<string, string> = {
   b11: '0 0 3047 797',
   b8: '0 0 2971 786',
-  b10: '0 0 2971 786',
+  b10: '0 0 2979 804',
 };
 
 export const INDOOR_MAPS: Record<string, Record<string, any>> = {

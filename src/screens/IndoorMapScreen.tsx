@@ -5,14 +5,14 @@ import {
   Dimensions,
   Text,
   TouchableOpacity,
-  ScrollView,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 
 import { INDOOR_MAPS, INDOOR_VIEWBOXES } from '../constants/indoorMaps';
 import IndoorPathOverlay from '../components/IndoorPathOverlay';
+import IndoorFloorDecoLayer from '../components/IndoorFloorDecoLayer';
 import RoomPickerModal from '../components/RoomPickerModal';
 import { findIndoorPath } from '../utils/pathfinding';
 import { IndoorNode, FloorLevel } from '../utils/indoor_graph';
@@ -20,7 +20,7 @@ import { IndoorNode, FloorLevel } from '../utils/indoor_graph';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Tòa nào đã có dữ liệu node (indoor_graph)
-const SUPPORTED_BUILDINGS = ['b11', 'b8'];
+const SUPPORTED_BUILDINGS = ['b11', 'b8', 'b10'];
 
 type Props = {
   buildingId: string;
@@ -42,10 +42,10 @@ export default function IndoorMapScreen({ buildingId }: Props) {
   const [showToPicker,   setShowToPicker]   = useState(false);
 
   // ── Gesture (Pinch + Pan) ────────────────────────────────────
-  const scale         = useSharedValue(1);
-  const savedScale    = useSharedValue(1);
-  const translateX    = useSharedValue(0);
-  const translateY    = useSharedValue(0);
+  const scale           = useSharedValue(1);
+  const savedScale      = useSharedValue(1);
+  const translateX      = useSharedValue(0);
+  const translateY      = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
@@ -64,6 +64,15 @@ export default function IndoorMapScreen({ buildingId }: Props) {
     });
 
   const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
+
+  const resetView = () => {
+    scale.value = withSpring(1);
+    savedScale.value = 1;
+    translateX.value = withSpring(0);
+    translateY.value = withSpring(0);
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+  };
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -93,7 +102,7 @@ export default function IndoorMapScreen({ buildingId }: Props) {
 
   // Tầng nào có đoạn lộ trình đi qua
   const floorsInRoute = currentRoute.length > 0
-    ? [...new Set(currentRoute.map(n => n.floor))] as FloorLevel[]
+    ? ([...new Set(currentRoute.map((n) => n.floor))] as FloorLevel[])
     : [];
 
   // ── Render bản đồ ────────────────────────────────────────────
@@ -112,11 +121,25 @@ export default function IndoorMapScreen({ buildingId }: Props) {
     const viewBox = INDOOR_VIEWBOXES[buildingId] ?? '0 0 3047 797';
 
     // Chỉ lấy node thuộc tầng đang xem
-    const floorPathNodes = currentRoute.filter(n => n.floor === selectedFloor);
+    const floorPathNodes = currentRoute.filter((n) => n.floor === selectedFloor);
 
     return (
       <View>
+        {/* Lớp 1: SVG sơ đồ gốc (base layer) */}
         <MapComponent width={svgW} height={svgH} />
+
+        {/* Lớp 2: Decoration Layer — phủ tối + badge phòng hiện đại */}
+        <IndoorFloorDecoLayer
+          buildingId={buildingId}
+          floor={selectedFloor}
+          width={svgW}
+          height={svgH}
+          viewBox={viewBox}
+          highlightRoomId={toRoom?.id}
+          startRoomId={fromRoom?.id}
+        />
+
+        {/* Lớp 3: Path Overlay — đường lộ trình + markers */}
         {floorPathNodes.length > 0 && (
           <IndoorPathOverlay
             pathNodes={floorPathNodes}
@@ -170,8 +193,7 @@ export default function IndoorMapScreen({ buildingId }: Props) {
 
   return (
     <View style={styles.container}>
-
-      {/* ─── Bản đồ (Gesture + Animated) ─────────────────────── */}
+      {/* ─── Bản đồ (Gesture + Animated) ───────────────────────── */}
       <GestureDetector gesture={composedGesture}>
         <Animated.View style={[styles.mapContainer, animatedStyle]}>
           {renderMap()}
@@ -181,14 +203,21 @@ export default function IndoorMapScreen({ buildingId }: Props) {
       {/* ─── Step Banner (xuyên tầng) ─────────────────────────── */}
       {renderStepBanner()}
 
-      {/* ─── Nút Quay lại ─────────────────────────────────────── */}
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-        <Text style={styles.backTxt}>⬅</Text>
-      </TouchableOpacity>
+      {/* ─── Nút Điều khiển Nổi (Góc trên) ─────────────────────── */}
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.glassBtn} onPress={() => router.back()}>
+          <Text style={styles.glassBtnTxt}>⬅ Quay lại</Text>
+        </TouchableOpacity>
+
+        {/* Nút Reset góc nhìn */}
+        <TouchableOpacity style={styles.glassBtn} onPress={resetView}>
+          <Text style={styles.glassBtnTxt}>🎯 Reset</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* ─── Floor Picker (phải) ──────────────────────────────── */}
       <View style={styles.floorPicker}>
-        {floors.map(floor => (
+        {floors.map((floor) => (
           <TouchableOpacity
             key={floor}
             style={[
@@ -201,20 +230,16 @@ export default function IndoorMapScreen({ buildingId }: Props) {
             <Text style={[styles.floorText, selectedFloor === floor && styles.floorTextActive]}>
               {floor}
             </Text>
-            {floorsInRoute.includes(floor) && (
-              <View style={styles.floorDot} />
-            )}
+            {floorsInRoute.includes(floor) && <View style={styles.floorDot} />}
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* ─── Route Panel (dưới) ───────────────────────────────── */}
+      {/* ─── Route Panel (dưới đáy) ──────────────────────────── */}
       <View style={styles.routePanel}>
         {!isSupported ? (
           <View style={styles.unsupportedRow}>
-            <Text style={styles.unsupportedTxt}>
-              ⚠️ Tòa này chưa hỗ trợ tìm đường
-            </Text>
+            <Text style={styles.unsupportedTxt}>⚠️ Tòa này chưa hỗ trợ tìm đường</Text>
           </View>
         ) : (
           <>
@@ -224,14 +249,16 @@ export default function IndoorMapScreen({ buildingId }: Props) {
               onPress={() => setShowFromPicker(true)}
               activeOpacity={0.75}
             >
-              <Text style={styles.roomSelectorIcon}>📍</Text>
+              <View style={[styles.iconCircle, { backgroundColor: '#10B98120' }]}>
+                <Text style={{ fontSize: 14 }}>📍</Text>
+              </View>
               <View style={styles.roomSelectorInfo}>
                 <Text style={styles.roomSelectorLabel}>Xuất phát</Text>
                 <Text
                   style={[styles.roomSelectorValue, !fromRoom && styles.roomSelectorPlaceholder]}
                   numberOfLines={1}
                 >
-                  {fromRoom ? `${fromRoom.label}  (Tầng ${fromRoom.floor})` : 'Chọn phòng...'}
+                  {fromRoom ? `${fromRoom.label}  (Tầng ${fromRoom.floor})` : 'Chọn phòng bắt đầu...'}
                 </Text>
               </View>
               <Text style={styles.roomSelectorChevron}>›</Text>
@@ -245,14 +272,16 @@ export default function IndoorMapScreen({ buildingId }: Props) {
               onPress={() => setShowToPicker(true)}
               activeOpacity={0.75}
             >
-              <Text style={styles.roomSelectorIcon}>🎯</Text>
+              <View style={[styles.iconCircle, { backgroundColor: '#EF444420' }]}>
+                <Text style={{ fontSize: 14 }}>🎯</Text>
+              </View>
               <View style={styles.roomSelectorInfo}>
                 <Text style={styles.roomSelectorLabel}>Điểm đến</Text>
                 <Text
                   style={[styles.roomSelectorValue, !toRoom && styles.roomSelectorPlaceholder]}
                   numberOfLines={1}
                 >
-                  {toRoom ? `${toRoom.label}  (Tầng ${toRoom.floor})` : 'Chọn phòng...'}
+                  {toRoom ? `${toRoom.label}  (Tầng ${toRoom.floor})` : 'Chọn phòng muốn đến...'}
                 </Text>
               </View>
               <Text style={styles.roomSelectorChevron}>›</Text>
@@ -265,7 +294,7 @@ export default function IndoorMapScreen({ buildingId }: Props) {
                 onPress={handleFindRoute}
                 disabled={!fromRoom || !toRoom}
               >
-                <Text style={styles.findBtnTxt}>🗺️  Tìm đường</Text>
+                <Text style={styles.findBtnTxt}>🗺️  Tìm đường ngay</Text>
               </TouchableOpacity>
 
               {currentRoute.length > 0 && (
@@ -277,9 +306,7 @@ export default function IndoorMapScreen({ buildingId }: Props) {
 
             {/* Thông báo kết quả */}
             {currentRoute.length === 0 && fromRoom && toRoom && (
-              <Text style={styles.noRouteTxt}>
-                ⚠️ Không tìm thấy đường đi giữa hai phòng này.
-              </Text>
+              <Text style={styles.noRouteTxt}>⚠️ Không tìm thấy đường đi giữa hai phòng này.</Text>
             )}
           </>
         )}
@@ -293,7 +320,7 @@ export default function IndoorMapScreen({ buildingId }: Props) {
         excludeRoomId={toRoom?.id}
         onSelect={(room) => {
           setFromRoom(room);
-          setCurrentRoute([]); // Reset lộ trình khi đổi điểm
+          setCurrentRoute([]);
         }}
         onClose={() => setShowFromPicker(false)}
       />
@@ -316,85 +343,94 @@ export default function IndoorMapScreen({ buildingId }: Props) {
 // ================================================================
 // STYLES
 // ================================================================
-const PANEL_HEIGHT = 170;
+const PANEL_HEIGHT = 178;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#0F172A',
     overflow: 'hidden',
   },
   mapContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: PANEL_HEIGHT,
+    marginBottom: PANEL_HEIGHT - 30,
   },
   infoTxt: {
-    color: 'white',
+    color: '#94A3B8',
     fontSize: 14,
   },
 
-  // ── Back button ──────────────────────────────────────────────
-  backBtn: {
+  // ── Top Bar ──────────────────────────────────────────────────
+  topBar: {
     position: 'absolute',
     top: 50,
     left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(50,50,50,0.9)',
-    justifyContent: 'center',
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    zIndex: 20,
+    zIndex: 30,
   },
-  backTxt: {
-    color: 'white',
-    fontSize: 18,
+  glassBtn: {
+    backgroundColor: 'rgba(30, 41, 59, 0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  glassBtnTxt: {
+    color: '#F8FAFC',
+    fontWeight: '600',
+    fontSize: 13,
   },
 
   // ── Floor picker ─────────────────────────────────────────────
   floorPicker: {
     position: 'absolute',
     right: 16,
-    bottom: PANEL_HEIGHT + 16,
-    backgroundColor: 'rgba(44,44,46,0.95)',
-    borderRadius: 25,
-    padding: 8,
-    gap: 10,
-    zIndex: 20,
+    bottom: PANEL_HEIGHT + 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    borderRadius: 24,
+    padding: 6,
+    gap: 8,
+    zIndex: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   floorButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#3A3A3C',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1E293B',
     justifyContent: 'center',
     alignItems: 'center',
   },
   floorButtonActive: {
-    backgroundColor: '#FF8D28',
+    backgroundColor: '#0284C7',
   },
   floorButtonHasRoute: {
     borderWidth: 2,
-    borderColor: '#FF8D28',
+    borderColor: '#38BDF8',
   },
   floorText: {
-    color: '#CCC',
-    fontSize: 15,
+    color: '#94A3B8',
+    fontSize: 14,
     fontWeight: '700',
   },
   floorTextActive: {
-    color: '#FFF',
+    color: '#FFFFFF',
   },
   floorDot: {
     position: 'absolute',
     top: 4,
     right: 4,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#FF8D28',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#38BDF8',
   },
 
   // ── Step Banner ───────────────────────────────────────────────
@@ -403,16 +439,16 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(30,30,30,0.95)',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
     paddingTop: 54,
     paddingBottom: 12,
     paddingHorizontal: 16,
-    zIndex: 15,
+    zIndex: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#334155',
   },
   stepBannerRoute: {
-    color: '#FFF',
+    color: '#F8FAFC',
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 8,
@@ -424,29 +460,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stepBtn: {
-    backgroundColor: '#FF8D28',
+    backgroundColor: '#0284C7',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 8,
   },
   stepBtnDisabled: {
-    backgroundColor: '#3A3A3C',
+    backgroundColor: '#334155',
   },
   stepBtnTxt: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
   },
   stepFloorChip: {
-    backgroundColor: '#2C2C2E',
+    backgroundColor: '#1E293B',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FF8D28',
+    borderColor: '#38BDF8',
   },
   stepFloorTxt: {
-    color: '#FF8D28',
+    color: '#38BDF8',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -458,94 +494,98 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: PANEL_HEIGHT,
-    backgroundColor: '#2C2C2E',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 18,
     paddingTop: 12,
-    paddingBottom: 8,
-    zIndex: 20,
+    paddingBottom: 10,
+    zIndex: 30,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 15,
   },
   roomSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     paddingVertical: 6,
   },
-  roomSelectorIcon: {
-    fontSize: 18,
-    width: 28,
-    textAlign: 'center',
+  iconCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   roomSelectorInfo: {
     flex: 1,
   },
   roomSelectorLabel: {
-    color: '#888',
-    fontSize: 11,
-    fontWeight: '600',
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   roomSelectorValue: {
-    color: '#FFF',
+    color: '#F8FAFC',
     fontSize: 15,
     fontWeight: '600',
     marginTop: 1,
   },
   roomSelectorPlaceholder: {
-    color: '#555',
+    color: '#475569',
     fontWeight: '400',
   },
   roomSelectorChevron: {
-    color: '#555',
-    fontSize: 22,
+    color: '#475569',
+    fontSize: 20,
   },
   panelDivider: {
     height: 1,
-    backgroundColor: '#3A3A3C',
+    backgroundColor: '#1E293B',
     marginVertical: 4,
-    marginLeft: 38,
+    marginLeft: 42,
   },
   actionRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 10,
+    marginTop: 8,
   },
   findBtn: {
     flex: 1,
-    backgroundColor: '#FF8D28',
-    borderRadius: 10,
+    backgroundColor: '#0284C7',
+    borderRadius: 12,
     paddingVertical: 10,
     alignItems: 'center',
   },
   findBtnDisabled: {
-    backgroundColor: '#3A3A3C',
+    backgroundColor: '#1E293B',
   },
   findBtnTxt: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },
   clearBtn: {
-    backgroundColor: '#3A3A3C',
-    borderRadius: 10,
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
     alignItems: 'center',
   },
   clearBtnTxt: {
-    color: '#FF453A',
+    color: '#EF4444',
     fontWeight: '600',
     fontSize: 14,
   },
   noRouteTxt: {
-    color: '#FF453A',
+    color: '#EF4444',
     fontSize: 12,
     textAlign: 'center',
     marginTop: 4,
@@ -556,7 +596,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   unsupportedTxt: {
-    color: '#888',
+    color: '#64748B',
     fontSize: 14,
   },
 });
