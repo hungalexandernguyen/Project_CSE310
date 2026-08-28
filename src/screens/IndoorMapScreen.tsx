@@ -96,17 +96,27 @@ export default function IndoorMapScreen({ buildingId }: Props) {
     setCurrentRoute(path);
     if (path.length > 0) {
       setSelectedFloor(fromRoom.floor);
-      // Bật tracking ngay khi bắt đầu tìm đường
+      // Bật tracking ngay khi bắt đầu tìm đường với Snap-to-Route
       const nodeData = MOCK_NODES[fromRoom.id];
       if (nodeData) {
-        startTracking({
-          x: nodeData.x,
-          y: nodeData.y,
-          floor: nodeData.floor
-        });
+        startTracking(
+          {
+            x: nodeData.x,
+            y: nodeData.y,
+            floor: nodeData.floor,
+          },
+          path
+        );
       }
     }
   }, [fromRoom, toRoom, startTracking]);
+
+  // Tự động chuyển tầng khi người dùng leo lên tầng mới
+  useEffect(() => {
+    if (currentPosition?.floor && currentPosition.floor !== selectedFloor) {
+      setSelectedFloor(currentPosition.floor);
+    }
+  }, [currentPosition?.floor]);
 
   const handleClearRoute = () => {
     setCurrentRoute([]);
@@ -188,6 +198,12 @@ export default function IndoorMapScreen({ buildingId }: Props) {
         <TouchableOpacity style={styles.glassBtn} onPress={() => router.back()}>
           <Text style={styles.glassBtnTxt}>Back</Text>
         </TouchableOpacity>
+
+        {currentPosition?.isAtStairs && (
+          <View style={styles.stairsChip}>
+            <Text style={styles.stairsChipTxt}>🪜 Climbing Stairs ({currentPosition.progressPercent ?? 0}%)</Text>
+          </View>
+        )}
       </View>
 
       {/* ─── Floor Picker (phải) ──────────────────────────────── */}
@@ -355,6 +371,22 @@ const styles = StyleSheet.create({
     color: '#F8FAFC',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  stairsChip: {
+    backgroundColor: '#EA580C',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#EA580C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  stairsChipTxt: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 
   // ── Floor picker ─────────────────────────────────────────────
