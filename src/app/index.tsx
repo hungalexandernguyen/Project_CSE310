@@ -3,17 +3,18 @@ import {
   Alert,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import MapView, {
   MapMarker,
+  MapType,
   Marker,
   Polygon,
   Polyline,
   PROVIDER_GOOGLE,
 } from 'react-native-maps';
 
-import { LinearGradient } from 'expo-linear-gradient';
 import BuildingInfoSheet from '../components/BuildingInfoSheet';
 import BuildingPickerModal, { PickerSelection } from '../components/BuildingPickerModal';
 import RoutePanel, { RouteOrigin } from '../components/RoutePanel';
@@ -36,6 +37,9 @@ const CAMPUS_BOUNDARY = [
 export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
   const markerRefs = useRef<Record<string, MapMarker | null>>({});
+
+  // Map type state: hybrid (realistic satellite + labels) or standard
+  const [currentMapType, setCurrentMapType] = useState<MapType>('hybrid');
 
   // Live GPS location
   const { location } = useLocation();
@@ -157,50 +161,67 @@ export default function HomeScreen() {
     setOrigin(null);
   };
 
+  const toggleMapType = () => {
+    setCurrentMapType((prev) => (prev === 'hybrid' ? 'standard' : 'hybrid'));
+  };
+
   return (
     <View style={styles.container}>
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
-        mapType="standard"
+        mapType={currentMapType}
+        showsBuildings={true}
+        showsCompass={true}
+        pitchEnabled={true}
+        rotateEnabled={true}
         style={styles.map}
-        initialRegion={{
-          latitude: 11.0537,
-          longitude: 106.6667,
-          latitudeDelta: 0.004,
-          longitudeDelta: 0.004,
+        initialCamera={{
+          center: {
+            latitude: 11.0537,
+            longitude: 106.6667,
+          },
+          pitch: 35,
+          heading: 0,
+          altitude: 800,
+          zoom: 17,
         }}
       >
-        {/* Layer 1: Campus boundary — soft fill, no border */}
+        {/* Layer 1: Campus boundary — elegant luminous border on satellite */}
         <Polygon
           coordinates={CAMPUS_BOUNDARY}
-          strokeWidth={0}
-          strokeColor="rgba(0,0,0,0)"
-          fillColor="rgba(120, 150, 220, 0.13)"
+          strokeWidth={1.5}
+          strokeColor="rgba(56, 189, 248, 0.7)"
+          fillColor="rgba(56, 189, 248, 0.08)"
           zIndex={1}
         />
 
-        {/* Layer 3: Route polyline — white border + Google-blue fill (nav style) */}
+        {/* Layer 3: Route polyline — High-contrast Cyan Dashed Walking Trail */}
         {routeCoords.length > 0 && (
           <>
-            {/* Shadow / border layer */}
+            {/* Dark contrast base */}
             <Polyline
               coordinates={routeCoords}
-              strokeColor="#ffffff"
-              strokeWidth={9}
+              strokeColor="#0F172A"
+              strokeWidth={6}
+              lineCap="round"
+              lineJoin="round"
               zIndex={3}
             />
-            {/* Main route colour */}
+            {/* Luminous Cyan Dashed Trail */}
             <Polyline
               coordinates={routeCoords}
-              strokeColor="#1A73E8"
-              strokeWidth={5}
+              strokeColor="#00F0FF"
+              strokeWidth={4}
+              lineDashPattern={[10, 8]}
+              lineCap="round"
+              lineJoin="round"
               zIndex={4}
             />
           </>
         )}
 
-        {/* Building markers — custom pill badges */}
+        {/* Building markers — high-contrast modern glass pills */}
         {BUILDINGS.map((building) => (
           <Marker
             key={building.id}
@@ -226,7 +247,7 @@ export default function HomeScreen() {
           </Marker>
         ))}
 
-        {/* User location — Google Maps blue dot */}
+        {/* User location — Glowing cyan GPS dot */}
         {location && (
           <Marker
             coordinate={location}
@@ -240,31 +261,19 @@ export default function HomeScreen() {
         )}
       </MapView>
 
-      {/* Vignette overlay — dims outer map edges, focuses attention on campus */}
-      <LinearGradient
-        colors={['rgba(0,0,0,0.32)', 'transparent']}
-        style={styles.vignetteTop}
-        pointerEvents="none"
-      />
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.32)']}
-        style={styles.vignetteBottom}
-        pointerEvents="none"
-      />
-      <LinearGradient
-        colors={['rgba(0,0,0,0.22)', 'transparent']}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={styles.vignetteLeft}
-        pointerEvents="none"
-      />
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.22)']}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={styles.vignetteRight}
-        pointerEvents="none"
-      />
+      {/* Quick Map Layer Toggle FAB */}
+      <TouchableOpacity
+        style={styles.mapLayerBtn}
+        onPress={toggleMapType}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.mapLayerBtnIcon}>
+          {currentMapType === 'hybrid' ? '🛰️' : '🗺️'}
+        </Text>
+        <Text style={styles.mapLayerBtnTxt}>
+          {currentMapType === 'hybrid' ? 'Vệ tinh' : 'Bản đồ'}
+        </Text>
+      </TouchableOpacity>
 
       {/* Building info sheet — slides up when a marker is tapped */}
       <BuildingInfoSheet
@@ -295,80 +304,85 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#0B1120' },
   map: { width: '100%', height: '100%' },
 
-  // Vignette strips — overlay the map edges
-  vignetteTop: {
+  // Layer Switcher Floating Button
+  mapLayerBtn: {
     position: 'absolute',
-    top: 0, left: 0, right: 0,
-    height: 120,
-    zIndex: 5,
+    top: 54,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 6,
+    zIndex: 20,
   },
-  vignetteBottom: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    height: 180,
-    zIndex: 5,
+  mapLayerBtnIcon: {
+    fontSize: 14,
+    marginRight: 5,
   },
-  vignetteLeft: {
-    position: 'absolute',
-    top: 0, bottom: 0, left: 0,
-    width: 80,
-    zIndex: 5,
-  },
-  vignetteRight: {
-    position: 'absolute',
-    top: 0, bottom: 0, right: 0,
-    width: 80,
-    zIndex: 5,
+  mapLayerBtnTxt: {
+    color: '#F8FAFC',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 
-  // Custom building badge marker
+  // Custom building badge marker — high contrast on satellite imagery
   badge: {
-    backgroundColor: '#fff',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderWidth: 1.5,
-    borderColor: '#4285F4',
+    borderColor: '#0284C7',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 4,
+    elevation: 6,
   },
   badgeActive: {
-    backgroundColor: '#1A73E8',
-    borderColor: '#1A73E8',
+    backgroundColor: '#0284C7',
+    borderColor: '#38BDF8',
   },
   badgeText: {
-    color: '#1A73E8',
-    fontSize: 10,
-    fontWeight: '700',
+    color: '#0369A1',
+    fontSize: 11,
+    fontWeight: '800',
     letterSpacing: 0.3,
   },
   badgeTextActive: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
 
-  // "You are here" Google blue dot
+  // "You are here" Glowing Cyan GPS dot
   userDotOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(26, 115, 232, 0.2)',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0, 229, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(26, 115, 232, 0.4)',
+    borderColor: 'rgba(0, 229, 255, 0.6)',
   },
   userDotInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#1A73E8',
+    backgroundColor: '#00E5FF',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: '#FFFFFF',
   },
 });

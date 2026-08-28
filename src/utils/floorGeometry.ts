@@ -197,8 +197,8 @@ const B10_1: FloorShape[] = [
 ];
 
 const B10_2: FloorShape[] = [
-  { id: '313_top', type: 'room', x: 2352, y: 24, w: 244, h: 202, label: '313' },
-  { id: '311_top', type: 'room', x: 2084, y: 19, w: 268, h: 202, label: '311' },
+  { id: '311_top', type: 'room', x: 2352, y: 24, w: 244, h: 202, label: '311' },
+  { id: '309_top', type: 'room', x: 2084, y: 19, w: 268, h: 202, label: '309' },
   { id: '307_top', type: 'room', x: 1792, y: 14, w: 293, h: 204, label: '307' },
   { id: '305_top', type: 'room', x: 1534, y: 10, w: 260, h: 202, label: '305' },
   { id: '303_top', type: 'room', x: 899, y: 11, w: 540, h: 197, label: '303' },
@@ -271,10 +271,10 @@ const B10_3: FloorShape[] = [
 ];
 
 const B10_G: FloorShape[] = [
-  { id: '210_top', type: 'room', x: 1504, y: 0, w: 1080, h: 191, label: '210' },
-  { id: '211_top', type: 'room', x: 386, y: 0, w: 1032, h: 191, label: '211' },
-  { id: '212_bot', type: 'room', x: 2436, y: 586, w: 232, h: 186, label: '212' },
-  { id: '108_bot', type: 'room', x: 1504, y: 585, w: 934, h: 186, label: '108' },
+  { id: '103_top', type: 'room', x: 1504, y: 0, w: 1080, h: 191, label: '103' },
+  { id: '101_top', type: 'room', x: 386, y: 0, w: 1032, h: 191, label: '101' },
+  { id: '108_bot', type: 'room', x: 2436, y: 586, w: 232, h: 186, label: '108' },
+  { id: '106_bot', type: 'room', x: 1504, y: 585, w: 934, h: 186, label: '106' },
   { id: '104_bot', type: 'room', x: 1293, y: 585, w: 125, h: 186, label: '104' },
   { id: '102_bot', type: 'room', x: 344, y: 585, w: 949, h: 186, label: '102' },
   { id: 'hall', type: 'hall', x: 2418, y: 191, w: 268, h: 395 },

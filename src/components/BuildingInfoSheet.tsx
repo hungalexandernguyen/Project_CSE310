@@ -90,16 +90,12 @@ export default function BuildingInfoSheet({ building, onNavigate, onClose }: Pro
               <Text style={styles.buildingLabel} numberOfLines={1}>
                 {displayed.label}
               </Text>
-              <View style={styles.badgePill}>
-                <Text style={styles.badgePillText}>{displayed.title}</Text>
-              </View>
+
             </View>
           </View>
 
           {/* ── Description ── */}
-          <Text style={styles.description} numberOfLines={2}>
-            {displayed.description}
-          </Text>
+
 
 
           {/* ── Action Buttons ── */}
@@ -109,7 +105,7 @@ export default function BuildingInfoSheet({ building, onNavigate, onClose }: Pro
               activeOpacity={0.85}
               onPress={() => onNavigate(displayed)}
             >
-              <Text style={styles.actionBtnText}>🧭 Routing</Text>
+              <Text style={styles.actionBtnText}>Route</Text>
             </TouchableOpacity>
 
             {!!INDOOR_MAPS[displayed.id] && (
@@ -118,7 +114,7 @@ export default function BuildingInfoSheet({ building, onNavigate, onClose }: Pro
                 activeOpacity={0.85}
                 onPress={() => router.push({ pathname: '/indoor' as any, params: { buildingId: displayed.id } })}
               >
-                <Text style={styles.actionBtnText}>🏢 Sơ đồ trong nhà</Text>
+                <Text style={styles.actionBtnText}>Indoor Map</Text>
               </TouchableOpacity>
             )}
           </View>

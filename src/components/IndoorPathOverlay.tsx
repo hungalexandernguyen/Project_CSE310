@@ -132,20 +132,6 @@ export default function IndoorPathOverlay({
           <Circle cx="0" cy="0" r="20" fill="url(#startGradient)" stroke="#FFFFFF" strokeWidth="5" />
           <Circle cx="0" cy="0" r="8" fill="#FFFFFF" />
 
-          {/* Badge Label "Vị trí của bạn / Bắt đầu" */}
-          <G transform="translate(-70, -68)">
-            <Rect width="140" height="34" rx="17" fill="#10B981" stroke="#FFFFFF" strokeWidth="2.5" />
-            <SvgText
-              x="70"
-              y="22"
-              fill="#FFFFFF"
-              fontSize="14"
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              📍 Xuất phát
-            </SvgText>
-          </G>
         </G>
       )}
 
@@ -161,20 +147,6 @@ export default function IndoorPathOverlay({
           <Circle cx="0" cy="0" r="22" fill="url(#destGradient)" stroke="#FFFFFF" strokeWidth="5" />
           <Circle cx="0" cy="0" r="9" fill="#FFFFFF" />
 
-          {/* Badge Label Đích đến */}
-          <G transform="translate(-70, -72)">
-            <Rect width="140" height="36" rx="18" fill="#EF4444" stroke="#FFFFFF" strokeWidth="2.5" />
-            <SvgText
-              x="70"
-              y="23"
-              fill="#FFFFFF"
-              fontSize="14"
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              🎯 Điểm đến
-            </SvgText>
-          </G>
         </G>
       )}
 
@@ -189,20 +161,6 @@ export default function IndoorPathOverlay({
             <G key={`stairs-pin-${node.id}-${index}`} transform={`translate(${node.x}, ${node.y})`}>
               <Circle cx="0" cy="0" r="26" fill="#FF8D28" fillOpacity="0.3" />
               <Circle cx="0" cy="0" r="18" fill="#FF8D28" stroke="#FFFFFF" strokeWidth="4" />
-              {/* Badge Cầu thang */}
-              <G transform="translate(-60, -56)">
-                <Rect width="120" height="30" rx="15" fill="#FF8D28" stroke="#FFFFFF" strokeWidth="2" />
-                <SvgText
-                  x="60"
-                  y="20"
-                  fill="#FFFFFF"
-                  fontSize="12"
-                  fontWeight="bold"
-                  textAnchor="middle"
-                >
-                  🪜 Cầu thang
-                </SvgText>
-              </G>
             </G>
           );
         })}

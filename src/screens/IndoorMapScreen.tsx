@@ -15,7 +15,8 @@ import IndoorPathOverlay from '../components/IndoorPathOverlay';
 import IndoorFloorDecoLayer from '../components/IndoorFloorDecoLayer';
 import RoomPickerModal from '../components/RoomPickerModal';
 import { findIndoorPath } from '../utils/pathfinding';
-import { IndoorNode, FloorLevel } from '../utils/indoor_graph';
+import { IndoorNode, FloorLevel, MOCK_NODES } from '../utils/indoor_graph';
+import { useIndoorTracking } from '../hooks/useIndoorTracking';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -34,24 +35,27 @@ export default function IndoorMapScreen({ buildingId }: Props) {
 
   // ── Trạng thái lộ trình ─────────────────────────────────────
   const [fromRoom, setFromRoom] = useState<IndoorNode | null>(null);
-  const [toRoom, setToRoom]     = useState<IndoorNode | null>(null);
+  const [toRoom, setToRoom] = useState<IndoorNode | null>(null);
   const [currentRoute, setCurrentRoute] = useState<IndoorNode[]>([]);
 
   // ── Modal picker ─────────────────────────────────────────────
   const [showFromPicker, setShowFromPicker] = useState(false);
-  const [showToPicker,   setShowToPicker]   = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
+
+  // ── Tracking ────────────────────────────────────────────────
+  const { isTracking, currentPosition, startTracking, stopTracking } = useIndoorTracking();
 
   // ── Gesture (Pinch + Pan) ────────────────────────────────────
-  const scale           = useSharedValue(1);
-  const savedScale      = useSharedValue(1);
-  const translateX      = useSharedValue(0);
-  const translateY      = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => { scale.value = savedScale.value * e.scale; })
-    .onEnd(()    => { savedScale.value = scale.value; });
+    .onEnd(() => { savedScale.value = scale.value; });
 
   const panGesture = Gesture.Pan()
     .onUpdate((e) => {
@@ -90,14 +94,26 @@ export default function IndoorMapScreen({ buildingId }: Props) {
     if (!fromRoom || !toRoom) return;
     const path = findIndoorPath(fromRoom.id, toRoom.id);
     setCurrentRoute(path);
-    if (path.length > 0) setSelectedFloor(fromRoom.floor);
-  }, [fromRoom, toRoom]);
+    if (path.length > 0) {
+      setSelectedFloor(fromRoom.floor);
+      // Bật tracking ngay khi bắt đầu tìm đường
+      const nodeData = MOCK_NODES[fromRoom.id];
+      if (nodeData) {
+        startTracking({
+          x: nodeData.x,
+          y: nodeData.y,
+          floor: nodeData.floor
+        });
+      }
+    }
+  }, [fromRoom, toRoom, startTracking]);
 
   const handleClearRoute = () => {
     setCurrentRoute([]);
     setFromRoom(null);
     setToRoom(null);
     setSelectedFloor('G');
+    stopTracking();
   };
 
   // Tầng nào có đoạn lộ trình đi qua
@@ -109,11 +125,11 @@ export default function IndoorMapScreen({ buildingId }: Props) {
   const renderMap = () => {
     const buildingMaps = INDOOR_MAPS[buildingId];
     if (!buildingMaps) {
-      return <Text style={styles.infoTxt}>Chưa có dữ liệu đồ họa cho tòa nhà này.</Text>;
+      return <Text style={styles.infoTxt}>No map graphic data for this building.</Text>;
     }
     const MapComponent = buildingMaps[selectedFloor];
     if (!MapComponent) {
-      return <Text style={styles.infoTxt}>Chưa có sơ đồ cho tầng này.</Text>;
+      return <Text style={styles.infoTxt}>No floor plan available for this floor.</Text>;
     }
 
     const svgW = SCREEN_WIDTH * 1.5;
@@ -137,6 +153,8 @@ export default function IndoorMapScreen({ buildingId }: Props) {
           viewBox={viewBox}
           highlightRoomId={toRoom?.id}
           startRoomId={fromRoom?.id}
+          route={currentRoute}
+          currentPos={currentPosition}
         />
 
         {/* Lớp 3: Path Overlay — đường lộ trình + markers */}
@@ -152,42 +170,7 @@ export default function IndoorMapScreen({ buildingId }: Props) {
     );
   };
 
-  // ── Render StepBanner (khi đang có lộ trình xuyên tầng) ─────
-  const renderStepBanner = () => {
-    if (currentRoute.length === 0 || floorsInRoute.length <= 1) return null;
-    const currentIdx = floorsInRoute.indexOf(selectedFloor);
-    const from = fromRoom?.label ?? fromRoom?.id ?? '';
-    const to   = toRoom?.label   ?? toRoom?.id   ?? '';
 
-    return (
-      <View style={styles.stepBanner}>
-        <Text style={styles.stepBannerRoute} numberOfLines={1}>
-          🧭 {from} → {to}
-        </Text>
-        <View style={styles.stepBannerNav}>
-          <TouchableOpacity
-            style={[styles.stepBtn, currentIdx <= 0 && styles.stepBtnDisabled]}
-            disabled={currentIdx <= 0}
-            onPress={() => setSelectedFloor(floorsInRoute[currentIdx - 1])}
-          >
-            <Text style={styles.stepBtnTxt}>‹ Tầng trước</Text>
-          </TouchableOpacity>
-
-          <View style={styles.stepFloorChip}>
-            <Text style={styles.stepFloorTxt}>Tầng {selectedFloor}</Text>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.stepBtn, currentIdx >= floorsInRoute.length - 1 && styles.stepBtnDisabled]}
-            disabled={currentIdx >= floorsInRoute.length - 1}
-            onPress={() => setSelectedFloor(floorsInRoute[currentIdx + 1])}
-          >
-            <Text style={styles.stepBtnTxt}>Tầng tiếp ›</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
 
   const isSupported = SUPPORTED_BUILDINGS.includes(buildingId);
 
@@ -200,18 +183,10 @@ export default function IndoorMapScreen({ buildingId }: Props) {
         </Animated.View>
       </GestureDetector>
 
-      {/* ─── Step Banner (xuyên tầng) ─────────────────────────── */}
-      {renderStepBanner()}
 
-      {/* ─── Nút Điều khiển Nổi (Góc trên) ─────────────────────── */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.glassBtn} onPress={() => router.back()}>
-          <Text style={styles.glassBtnTxt}>⬅ Quay lại</Text>
-        </TouchableOpacity>
-
-        {/* Nút Reset góc nhìn */}
-        <TouchableOpacity style={styles.glassBtn} onPress={resetView}>
-          <Text style={styles.glassBtnTxt}>🎯 Reset</Text>
+          <Text style={styles.glassBtnTxt}>Back</Text>
         </TouchableOpacity>
       </View>
 
@@ -239,7 +214,7 @@ export default function IndoorMapScreen({ buildingId }: Props) {
       <View style={styles.routePanel}>
         {!isSupported ? (
           <View style={styles.unsupportedRow}>
-            <Text style={styles.unsupportedTxt}>⚠️ Tòa này chưa hỗ trợ tìm đường</Text>
+            <Text style={styles.unsupportedTxt}>⚠️ Indoor navigation not supported for this building</Text>
           </View>
         ) : (
           <>
@@ -253,12 +228,11 @@ export default function IndoorMapScreen({ buildingId }: Props) {
                 <Text style={{ fontSize: 14 }}>📍</Text>
               </View>
               <View style={styles.roomSelectorInfo}>
-                <Text style={styles.roomSelectorLabel}>Xuất phát</Text>
                 <Text
                   style={[styles.roomSelectorValue, !fromRoom && styles.roomSelectorPlaceholder]}
                   numberOfLines={1}
                 >
-                  {fromRoom ? `${fromRoom.label}  (Tầng ${fromRoom.floor})` : 'Chọn phòng bắt đầu...'}
+                  {fromRoom ? `${(fromRoom.label ?? fromRoom.id).replace('Phòng ', '')}  (Floor ${fromRoom.floor})` : 'Choose starting room...'}
                 </Text>
               </View>
               <Text style={styles.roomSelectorChevron}>›</Text>
@@ -276,12 +250,11 @@ export default function IndoorMapScreen({ buildingId }: Props) {
                 <Text style={{ fontSize: 14 }}>🎯</Text>
               </View>
               <View style={styles.roomSelectorInfo}>
-                <Text style={styles.roomSelectorLabel}>Điểm đến</Text>
                 <Text
                   style={[styles.roomSelectorValue, !toRoom && styles.roomSelectorPlaceholder]}
                   numberOfLines={1}
                 >
-                  {toRoom ? `${toRoom.label}  (Tầng ${toRoom.floor})` : 'Chọn phòng muốn đến...'}
+                  {toRoom ? `${(toRoom.label ?? toRoom.id).replace('Phòng ', '')}  (Floor ${toRoom.floor})` : 'Choose destination room...'}
                 </Text>
               </View>
               <Text style={styles.roomSelectorChevron}>›</Text>
@@ -294,20 +267,17 @@ export default function IndoorMapScreen({ buildingId }: Props) {
                 onPress={handleFindRoute}
                 disabled={!fromRoom || !toRoom}
               >
-                <Text style={styles.findBtnTxt}>🗺️  Tìm đường ngay</Text>
+                <Text style={styles.findBtnTxt}>Find Route</Text>
               </TouchableOpacity>
 
               {currentRoute.length > 0 && (
                 <TouchableOpacity style={styles.clearBtn} onPress={handleClearRoute}>
-                  <Text style={styles.clearBtnTxt}>✕ Xóa</Text>
+                  <Text style={styles.clearBtnTxt}>✕ Clear</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Thông báo kết quả */}
-            {currentRoute.length === 0 && fromRoom && toRoom && (
-              <Text style={styles.noRouteTxt}>⚠️ Không tìm thấy đường đi giữa hai phòng này.</Text>
-            )}
+            {/* Nút hành động */}
           </>
         )}
       </View>
@@ -316,7 +286,7 @@ export default function IndoorMapScreen({ buildingId }: Props) {
       <RoomPickerModal
         visible={showFromPicker}
         buildingId={buildingId}
-        title="Chọn phòng xuất phát"
+        title="Select Starting Room"
         excludeRoomId={toRoom?.id}
         onSelect={(room) => {
           setFromRoom(room);
@@ -328,7 +298,7 @@ export default function IndoorMapScreen({ buildingId }: Props) {
       <RoomPickerModal
         visible={showToPicker}
         buildingId={buildingId}
-        title="Chọn điểm đến"
+        title="Select Destination Room"
         excludeRoomId={fromRoom?.id}
         onSelect={(room) => {
           setToRoom(room);
@@ -383,8 +353,8 @@ const styles = StyleSheet.create({
   },
   glassBtnTxt: {
     color: '#F8FAFC',
-    fontWeight: '600',
-    fontSize: 13,
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 
   // ── Floor picker ─────────────────────────────────────────────
@@ -433,59 +403,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#38BDF8',
   },
 
-  // ── Step Banner ───────────────────────────────────────────────
-  stepBanner: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-    paddingTop: 54,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    zIndex: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-  },
-  stepBannerRoute: {
-    color: '#F8FAFC',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  stepBannerNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  stepBtn: {
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  stepBtnDisabled: {
-    backgroundColor: '#334155',
-  },
-  stepBtnTxt: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  stepFloorChip: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#38BDF8',
-  },
-  stepFloorTxt: {
-    color: '#38BDF8',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+
 
   // ── Route Panel ───────────────────────────────────────────────
   routePanel: {
@@ -494,7 +412,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: PANEL_HEIGHT,
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 18,
@@ -502,10 +420,10 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     zIndex: 30,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 15,
   },
@@ -533,22 +451,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   roomSelectorValue: {
-    color: '#F8FAFC',
+    color: '#1E293B',
     fontSize: 15,
     fontWeight: '600',
     marginTop: 1,
   },
   roomSelectorPlaceholder: {
-    color: '#475569',
+    color: '#94A3B8',
     fontWeight: '400',
   },
   roomSelectorChevron: {
-    color: '#475569',
+    color: '#94A3B8',
     fontSize: 20,
   },
   panelDivider: {
     height: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F1F5F9',
     marginVertical: 4,
     marginLeft: 42,
   },
@@ -565,7 +483,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   findBtnDisabled: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#E2E8F0',
   },
   findBtnTxt: {
     color: '#FFFFFF',
@@ -573,7 +491,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   clearBtn: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#FEE2E2',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,

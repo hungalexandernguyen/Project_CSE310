@@ -111,7 +111,7 @@ export default function RoutePanel({
           <View style={styles.handleBar} />
         </TouchableOpacity>
         <View style={styles.titleRow}>
-          <Text style={styles.panelTitle}>🗺️  Route Planner</Text>
+          <Text style={styles.panelTitle}>Route Planner</Text>
           {hasRoute && (
             <TouchableOpacity onPress={onClear} style={styles.clearBtn} activeOpacity={0.8}>
               <Text style={styles.clearText}>✕ Clear</Text>

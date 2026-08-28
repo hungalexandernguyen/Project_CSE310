@@ -86,7 +86,7 @@ export default function RoomPickerModal({
             <Text style={styles.searchIcon}>🔍</Text>
             <TextInput
               style={styles.searchInput}
-              placeholder="Tìm phòng..."
+              placeholder="Search room..."
               placeholderTextColor="#888"
               value={query}
               onChangeText={setQuery}
@@ -102,7 +102,7 @@ export default function RoomPickerModal({
           {/* Room list */}
           {filtered.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyTxt}>Không tìm thấy phòng nào</Text>
+              <Text style={styles.emptyTxt}>No rooms found</Text>
             </View>
           ) : (
             <SectionList
@@ -120,7 +120,7 @@ export default function RoomPickerModal({
                   activeOpacity={0.7}
                 >
                   <Text style={styles.roomLabel}>
-                    {item.label ?? item.id}
+                    {(item.label ?? item.id).replace('Phòng ', '')}
                   </Text>
                   <Text style={styles.roomArrow}>›</Text>
                 </TouchableOpacity>

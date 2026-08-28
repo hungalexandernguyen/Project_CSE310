@@ -12,10 +12,10 @@ export interface RoomSection {
 }
 
 const FLOOR_LABELS: Record<FloorLevel, string> = {
-  G: 'Tầng G (Trệt)',
-  '1': 'Tầng 1',
-  '2': 'Tầng 2',
-  '3': 'Tầng 3',
+  G: 'Ground Floor (G)',
+  '1': 'Floor 1',
+  '2': 'Floor 2',
+  '3': 'Floor 3',
 };
 
 const FLOOR_ORDER: FloorLevel[] = ['G', '1', '2', '3'];

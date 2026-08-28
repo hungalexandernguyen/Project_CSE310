@@ -3,9 +3,9 @@ const path = require('path');
 
 const ROOM_FILL = '#FF8D28';
 const HALL_FILL = '#AC7F5E';
-const WC_FILLS  = ['#34C759', '#FFCC00'];
+const WC_FILLS = ['#34C759', '#FFCC00'];
 const STAIR_FILL = '#FF383C';
-const ELEV_FILL  = '#FF2D55';
+const ELEV_FILL = '#FF2D55';
 
 function getTypeFromFill(fill) {
   if (!fill) return null;
@@ -13,9 +13,9 @@ function getTypeFromFill(fill) {
   if (fill === HALL_FILL) return 'hall';
   if (WC_FILLS.includes(fill)) return 'wc';
   if (fill === STAIR_FILL) return 'stairs';
-  if (fill === ELEV_FILL)  return 'elevator';
-  if (fill === ROOM_FILL)  return 'room';
-  return null; 
+  if (fill === ELEV_FILL) return 'elevator';
+  if (fill === ROOM_FILL) return 'room';
+  return null;
 }
 
 function cleanId(rawId) {
@@ -25,7 +25,7 @@ function cleanId(rawId) {
 function parseSvg(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8');
   const shapes = [];
-  
+
   // A helper to extract attributes without requiring a leading space
   const getAttr = (str, attr) => {
     const regex = new RegExp(`(?:^|\\s)${attr}="([^"]+)"`);
@@ -40,15 +40,15 @@ function parseSvg(filePath) {
     const id = getAttr(attrs, 'id');
     const fill = getAttr(attrs, 'fill');
     if (!id || !fill) continue;
-    
+
     const type = getTypeFromFill(fill);
     if (!type) continue;
-    
+
     let x = parseFloat(getAttr(attrs, 'x')) || 0;
     let y = parseFloat(getAttr(attrs, 'y')) || 0;
     let w = parseFloat(getAttr(attrs, 'width')) || 0;
     let h = parseFloat(getAttr(attrs, 'height')) || 0;
-    
+
     const transform = getAttr(attrs, 'transform');
     if (transform && transform.startsWith('matrix')) {
       const matchMat = transform.match(/matrix\(([^)]+)\)/);
@@ -72,15 +72,15 @@ function parseSvg(filePath) {
         h = Math.max(...ys) - y;
       }
     } else if (transform && transform.startsWith('rotate')) {
-       const matchRot = transform.match(/rotate\(([^)]+)\)/);
-       if (matchRot) {
-         const parts = matchRot[1].split(/[ ,]+/).map(parseFloat);
-         if (parts.length === 3 && Math.abs(parts[0]) > 170) {
-            const [deg, cx, cy] = parts;
-            x = cx - (x + w - cx);
-            y = cy - (y + h - cy);
-         }
-       }
+      const matchRot = transform.match(/rotate\(([^)]+)\)/);
+      if (matchRot) {
+        const parts = matchRot[1].split(/[ ,]+/).map(parseFloat);
+        if (parts.length === 3 && Math.abs(parts[0]) > 170) {
+          const [deg, cx, cy] = parts;
+          x = cx - (x + w - cx);
+          y = cy - (y + h - cy);
+        }
+      }
     }
 
     shapes.push({
@@ -90,17 +90,17 @@ function parseSvg(filePath) {
       w: Math.round(w), h: Math.round(h),
     });
   }
-  
+
   const pathTagRegex = /<path\s+([^>]+)\/?>/g;
   while ((m = pathTagRegex.exec(content)) !== null) {
     const attrs = m[1];
     const id = getAttr(attrs, 'id');
     const fill = getAttr(attrs, 'fill');
     if (!id || !fill) continue;
-    
+
     const type = getTypeFromFill(fill);
-    if (!type) continue; 
-    
+    if (!type) continue;
+
     const d = getAttr(attrs, 'd');
     if (!d) continue;
 
@@ -110,29 +110,29 @@ function parseSvg(filePath) {
       let ys = [];
       let currentX = 0, currentY = 0;
       let cmds = d.match(/[MLHVZ][^MLHVZ]*/gi) || [];
-      
+
       for (const cmdStr of cmds) {
-         const cmd = cmdStr[0].toUpperCase();
-         const nums = (cmdStr.slice(1).match(/-?[0-9.]+/g) || []).map(parseFloat);
-         if (cmd === 'M' || cmd === 'L') {
-            for (let i = 0; i < nums.length; i+=2) {
-               currentX = nums[i];
-               currentY = nums[i+1];
-               xs.push(currentX); ys.push(currentY);
-            }
-         } else if (cmd === 'H') {
-            if (nums.length > 0) {
-                currentX = nums[0];
-                xs.push(currentX);
-            }
-         } else if (cmd === 'V') {
-            if (nums.length > 0) {
-                currentY = nums[0];
-                ys.push(currentY);
-            }
-         }
+        const cmd = cmdStr[0].toUpperCase();
+        const nums = (cmdStr.slice(1).match(/-?[0-9.]+/g) || []).map(parseFloat);
+        if (cmd === 'M' || cmd === 'L') {
+          for (let i = 0; i < nums.length; i += 2) {
+            currentX = nums[i];
+            currentY = nums[i + 1];
+            xs.push(currentX); ys.push(currentY);
+          }
+        } else if (cmd === 'H') {
+          if (nums.length > 0) {
+            currentX = nums[0];
+            xs.push(currentX);
+          }
+        } else if (cmd === 'V') {
+          if (nums.length > 0) {
+            currentY = nums[0];
+            ys.push(currentY);
+          }
+        }
       }
-      
+
       if (xs.length > 0 && ys.length > 0) {
         const minX = Math.min(...xs);
         const maxX = Math.max(...xs);
@@ -150,7 +150,7 @@ function parseSvg(filePath) {
       }
     }
   }
-  
+
   // Filter out WC text labels (small path-based text, not real WC rooms)
   // Real WC rooms are at least 150px wide; text labels are ~100x50px
   const filtered = shapes.filter(s => {
@@ -173,7 +173,7 @@ function parseSvg(filePath) {
       usedIds.add(s.id);
     }
   }
-  
+
   return filtered;
 }
 
@@ -188,7 +188,7 @@ for (const b of buildings) {
     const floor = file.replace('.svg', '').replace('Floor_', '');
     const varName = `${b}_${floor}`;
     const shapes = parseSvg(path.join(dir, file));
-    
+
     shapes.sort((a, bb) => {
       const order = { room: 0, hall: 1, wc: 2, stairs: 3, elevator: 4 };
       if (order[a.type] !== order[bb.type]) return order[a.type] - order[bb.type];
@@ -199,7 +199,7 @@ for (const b of buildings) {
       }
       return 0;
     });
-    
+
     results[varName] = shapes;
   }
 }
@@ -216,7 +216,7 @@ for (const [varName, shapes] of Object.entries(results)) {
     }
   }
   block += `]`;
-  
+
   const regex = new RegExp(`const ${varName}: FloorShape\\[\\] = \\[[\\s\\S]*?\\]`);
   if (geo.match(regex)) {
     geo = geo.replace(regex, block);

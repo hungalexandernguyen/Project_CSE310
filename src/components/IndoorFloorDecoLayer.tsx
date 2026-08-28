@@ -20,8 +20,10 @@ import Svg, {
   Line,
 } from 'react-native-svg';
 import { StyleSheet } from 'react-native';
-import { FloorLevel } from '../utils/indoor_graph';
+import { FloorLevel, IndoorNode } from '../utils/indoor_graph';
 import { FLOOR_GEOMETRY, FloorShape } from '../utils/floorGeometry';
+import { UserPosition } from '../hooks/useIndoorTracking';
+import { Circle, Path } from 'react-native-svg';
 
 type Props = {
   buildingId: string;
@@ -31,6 +33,8 @@ type Props = {
   viewBox: string;
   highlightRoomId?: string;
   startRoomId?: string;
+  route?: IndoorNode[];
+  currentPos?: UserPosition | null;
 };
 
 // ── Bảng màu Style A ─────────────────────────────────────────
@@ -69,6 +73,8 @@ export default function IndoorFloorDecoLayer({
   viewBox,
   highlightRoomId,
   startRoomId,
+  route,
+  currentPos,
 }: Props) {
   const shapes = FLOOR_GEOMETRY[buildingId]?.[floor];
 
@@ -261,6 +267,21 @@ export default function IndoorFloorDecoLayer({
           </G>
         );
       })}
+
+      {/* ─── 8. User Position Marker (PDR) ───────────────────── */}
+      {currentPos && currentPos.floor === floor && (
+        <G transform={`translate(${currentPos.x}, ${currentPos.y})`}>
+          <Circle r="30" fill="#3B82F6" opacity="0.3" />
+          <Circle r="12" fill="#FFFFFF" />
+          <Circle r="8" fill="#2563EB" />
+          <G transform={`rotate(${currentPos.heading})`}>
+            <Path
+              d="M -6 -12 L 0 -22 L 6 -12 Z"
+              fill="#DC2626"
+            />
+          </G>
+        </G>
+      )}
     </Svg>
   );
 }

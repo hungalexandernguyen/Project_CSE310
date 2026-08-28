@@ -7,7 +7,7 @@ export default function IndoorRoute() {
 
   return (
     <>
-      <Stack.Screen options={{ title: `Sơ đồ tòa nhà ${buildingId ?? 'B11'}` }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <IndoorMapScreen buildingId={buildingId ?? 'B11'} />
     </>
   );
